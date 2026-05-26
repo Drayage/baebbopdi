@@ -3,23 +3,22 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#151922">
-  <title>배뽑디 - 배치 & 뽑기 디펜스</title>
+  <meta name="theme-color" content="#11151d">
+  <title>배뽑디 - 2Way 뽑기 디펜스</title>
   <style>
     :root {
-      --bg: #101218;
-      --ink: #f5f7fb;
-      --muted: #aab3c5;
-      --panel: #1a1f2b;
-      --line: #30384a;
-      --danger: #ff5570;
-      --ok: #3ddc97;
-      --gold: #f6c84c;
-      --silver: #d9e2ef;
-      --blue: #5eb5ff;
-      --green: #65d279;
-      --red: #ff6a59;
-      --shadow: 0 20px 60px rgba(0, 0, 0, .32);
+      --bg: #10131a;
+      --panel: #181e29;
+      --panel2: #202838;
+      --line: #334054;
+      --ink: #f7f9ff;
+      --muted: #aab5c7;
+      --coin: #ffd460;
+      --red: #ff5c70;
+      --blue: #62b9ff;
+      --green: #67df8d;
+      --purple: #bb7cff;
+      --shadow: 0 20px 70px rgba(0, 0, 0, .34);
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
@@ -30,9 +29,9 @@
       min-height: 100vh;
       color: var(--ink);
       background:
-        radial-gradient(circle at 16% 6%, rgba(255, 106, 89, .12), transparent 30%),
-        radial-gradient(circle at 85% 0%, rgba(94, 181, 255, .14), transparent 28%),
-        linear-gradient(135deg, #101218 0%, #151922 48%, #11161e 100%);
+        radial-gradient(circle at 18% 0%, rgba(255, 92, 112, .16), transparent 28%),
+        radial-gradient(circle at 80% 3%, rgba(98, 185, 255, .14), transparent 30%),
+        linear-gradient(145deg, #10131a, #141a24 54%, #10141d);
       overflow-x: hidden;
     }
 
@@ -41,321 +40,277 @@
       color: inherit;
       font: inherit;
       cursor: pointer;
-      touch-action: manipulation;
       -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
     }
 
     .app {
-      width: min(1200px, 100%);
-      min-height: 100vh;
+      width: min(1280px, 100%);
       margin: 0 auto;
-      padding: max(12px, env(safe-area-inset-top)) 12px max(86px, env(safe-area-inset-bottom));
+      min-height: 100vh;
+      padding: max(12px, env(safe-area-inset-top)) 12px max(18px, env(safe-area-inset-bottom));
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 300px;
+      grid-template-rows: auto auto 1fr auto;
       gap: 12px;
     }
 
     header {
-      grid-column: 1 / -1;
       display: grid;
       grid-template-columns: 1fr auto;
-      align-items: center;
       gap: 10px;
+      align-items: center;
     }
 
     h1 {
       margin: 0;
-      font-size: clamp(24px, 4vw, 42px);
+      font-size: clamp(25px, 4vw, 44px);
       line-height: 1;
       letter-spacing: 0;
     }
 
-    .topline {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      justify-content: flex-end;
-      align-items: center;
+    .subtitle {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
     }
 
-    .pill, .resource, .meter {
-      min-height: 36px;
+    .hud {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .pill, .btn {
+      min-height: 40px;
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      justify-content: center;
+      gap: 7px;
       padding: 8px 10px;
-      border: 1px solid var(--line);
       border-radius: 8px;
-      background: rgba(26, 31, 43, .82);
-      box-shadow: 0 8px 20px rgba(0, 0, 0, .16);
+      border: 1px solid rgba(255, 255, 255, .12);
+      background: rgba(24, 30, 41, .9);
+      box-shadow: 0 9px 22px rgba(0, 0, 0, .2);
+      font-weight: 900;
       white-space: nowrap;
     }
 
-    .banner {
-      grid-column: 1 / -1;
-      min-height: 42px;
+    .btn.primary {
+      color: #231906;
+      border-color: rgba(255, 212, 96, .45);
+      background: linear-gradient(135deg, #ffe085, #ff9f52);
+    }
+
+    .btn.blue {
+      color: #061622;
+      background: linear-gradient(135deg, #62b9ff, #67df8d);
+    }
+
+    .btn.red {
+      background: linear-gradient(135deg, #ff5c70, #bb7cff);
+    }
+
+    .btn:disabled {
+      opacity: .42;
+      cursor: not-allowed;
+      filter: grayscale(.7);
+    }
+
+    .status {
+      min-height: 46px;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 8px 12px;
-      border: 1px solid rgba(246, 200, 76, .44);
+      padding: 9px 12px;
+      border: 1px solid rgba(255, 212, 96, .34);
       border-radius: 8px;
-      background: linear-gradient(90deg, rgba(246, 200, 76, .13), rgba(94, 181, 255, .12), rgba(101, 210, 121, .12));
-      color: #fff9db;
+      background: linear-gradient(90deg, rgba(255, 212, 96, .12), rgba(98, 185, 255, .1), rgba(103, 223, 141, .1));
+      color: #fff3c1;
       text-align: center;
-      font-weight: 800;
+      font-weight: 900;
     }
 
-    main {
+    .battlefield {
       display: grid;
-      grid-template-rows: auto auto auto;
+      grid-template-columns: 1fr 1fr;
       gap: 12px;
-      min-width: 0;
+      min-height: 0;
     }
 
-    .zone {
-      padding: 10px;
+    .lane {
+      position: relative;
+      min-height: 520px;
       border: 1px solid var(--line);
       border-radius: 8px;
-      background: rgba(26, 31, 43, .88);
+      background: linear-gradient(145deg, rgba(32, 40, 56, .95), rgba(20, 25, 35, .95));
       box-shadow: var(--shadow);
-      min-width: 0;
+      overflow: hidden;
     }
 
-    .zone-head {
-      min-height: 30px;
+    .lane-head {
+      position: absolute;
+      z-index: 5;
+      left: 12px;
+      right: 12px;
+      top: 10px;
       display: flex;
-      align-items: center;
       justify-content: space-between;
       gap: 8px;
-      margin-bottom: 8px;
+      align-items: center;
       color: var(--muted);
-      font-weight: 800;
       font-size: 13px;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
-      gap: 6px;
-    }
-
-    .tile {
-      position: relative;
-      aspect-ratio: 1 / 1;
-      min-width: 0;
-      border: 1px solid rgba(255, 255, 255, .08);
-      border-radius: 7px;
-      background: #111722;
-      overflow: hidden;
-      transition: transform .12s ease, border-color .12s ease, filter .12s ease;
-    }
-
-    .tile.safe { background: linear-gradient(145deg, #182435, #101722); }
-    .tile.mob { background: linear-gradient(145deg, #1c2630, #111820); }
-    .tile.boss { background: linear-gradient(145deg, #2a1b25, #121820); }
-    .tile.targetable { border-color: rgba(94, 181, 255, .75); }
-    .tile.selected { outline: 3px solid #fff; outline-offset: -4px; animation: blink .82s ease-in-out infinite; }
-    .tile.enemy::after {
-      content: "";
-      position: absolute;
-      inset: 28%;
-      border-radius: 50%;
-      background: var(--danger);
-      box-shadow: 0 0 18px var(--danger);
-    }
-
-    .mob-pack {
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      width: 28px;
-      height: 28px;
-      transform: translate(-50%, -50%);
-      display: grid;
-      place-items: center;
-      border-radius: 50%;
-      background: radial-gradient(circle, #ffbd75, #ff5570 62%, #7f1d35);
-      border: 1px solid rgba(255, 255, 255, .55);
-      box-shadow: 0 0 16px rgba(255, 85, 112, .75);
-      color: #fff;
-      font-size: 10px;
       font-weight: 900;
-      z-index: 2;
       pointer-events: none;
     }
-    .tile.path::before {
-      content: "";
+
+    .lane canvas {
       position: absolute;
-      inset: 5px;
-      border: 2px dashed rgba(255, 255, 255, .16);
-      border-radius: 6px;
+      inset: 0;
+      width: 100%;
+      height: 100%;
     }
 
-    @keyframes blink {
+    .slots {
+      position: absolute;
+      inset: 19% 21%;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-rows: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      z-index: 4;
+    }
+
+    .slots.right {
+      inset: 24% 24%;
+      grid-template-rows: repeat(2, minmax(0, 1fr));
+    }
+
+    .slot {
+      position: relative;
+      min-width: 0;
+      border-radius: 8px;
+      border: 2px dashed rgba(255, 255, 255, .22);
+      background: rgba(10, 14, 21, .38);
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+    }
+
+    .slot.ready {
+      border-color: rgba(98, 185, 255, .9);
+      box-shadow: inset 0 0 0 2px rgba(98, 185, 255, .18), 0 0 18px rgba(98, 185, 255, .2);
+    }
+
+    .slot.selected {
+      border-style: solid;
+      border-color: #fff;
+      animation: pulse .75s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
       50% { filter: brightness(1.35); }
     }
 
     .unit {
-      position: absolute;
-      inset: 5px;
-      border-radius: 7px;
-      border: 1px solid rgba(255, 255, 255, .35);
+      width: min(68px, 82%);
+      aspect-ratio: 1;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, .45);
       display: grid;
       place-items: center;
-      font-size: clamp(18px, 5vw, 30px);
-      font-weight: 900;
+      font-weight: 1000;
+      font-size: clamp(22px, 4vw, 34px);
       text-shadow: 0 2px 10px rgba(0, 0, 0, .45);
-      pointer-events: none;
-      z-index: 3;
     }
 
-    .tier-iron { background: radial-gradient(circle, #858b92, #4d535b); }
-    .tier-bronze { background: radial-gradient(circle, #c7905e, #6b4432); }
-    .tier-silver { background: radial-gradient(circle, #ffffff, #b7c4d7); color: #17202c; }
-    .tier-gold { background: radial-gradient(circle, #fff3a7, #d59520); color: #21180c; }
-    .tier-diamond { background: radial-gradient(circle, #c8fbff, #4ca8ff); color: #071b2d; }
-    .tier-legend { background: radial-gradient(circle, #ff8bd1, #b7214f 58%, #4a1834); }
-
-    .badge {
+    .unit::after {
+      content: attr(data-elem);
       position: absolute;
-      top: 2px;
-      right: 2px;
-      width: 22px;
-      height: 22px;
+      top: 7px;
+      right: 7px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, .5);
       display: grid;
       place-items: center;
-      border-radius: 50%;
-      background: rgba(0, 0, 0, .42);
       font-size: 13px;
-      pointer-events: none;
     }
 
-    .rank-dot {
-      position: absolute;
-      bottom: 4px;
-      left: 5px;
-      right: 5px;
-      height: 4px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, .7);
-    }
+    .tier-iron { background: radial-gradient(circle, #8d939c, #4f5762); }
+    .tier-bronze { background: radial-gradient(circle, #d9a06b, #75452d); }
+    .tier-silver { background: radial-gradient(circle, #fff, #aebdd0); color: #17202b; }
+    .tier-gold { background: radial-gradient(circle, #fff1a4, #d99a22); color: #211704; }
+    .tier-diamond { background: radial-gradient(circle, #c7feff, #4aa7ff); color: #061724; }
+    .tier-legend { background: radial-gradient(circle, #ff8ed8, #b72052 58%, #44172f); }
 
-    aside {
+    .controls {
       display: grid;
+      grid-template-columns: 1.1fr 1fr;
       gap: 12px;
-      align-content: start;
     }
 
     .panel {
       border: 1px solid var(--line);
       border-radius: 8px;
-      background: rgba(26, 31, 43, .9);
+      background: rgba(24, 30, 41, .92);
       box-shadow: var(--shadow);
-      overflow: hidden;
+      padding: 10px;
     }
 
-    .panel h2 {
-      margin: 0;
-      padding: 12px;
-      font-size: 16px;
-      border-bottom: 1px solid var(--line);
-    }
-
-    .panel-body {
-      padding: 12px;
-      display: grid;
-      gap: 10px;
-    }
-
-    .actions {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 8px;
-    }
-
-    .btn {
-      min-height: 42px;
-      display: inline-flex;
-      justify-content: center;
-      align-items: center;
-      gap: 6px;
-      padding: 8px;
-      border-radius: 8px;
-      background: #2a3345;
+    .panel-title {
+      margin: 0 0 9px;
+      color: var(--muted);
+      font-size: 13px;
       font-weight: 900;
     }
 
-    .btn.primary { background: linear-gradient(135deg, #f6c84c, #ff7f50); color: #21160c; }
-    .btn.good { background: linear-gradient(135deg, #3ddc97, #5eb5ff); color: #06151d; }
-    .btn.warn { background: linear-gradient(135deg, #ff5570, #b069ff); }
-    .btn:disabled { opacity: .42; cursor: not-allowed; filter: grayscale(.5); }
-
-    .upgrade-row, .exchange-row {
+    .bench {
       display: grid;
-      grid-template-columns: 1fr auto auto;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
       gap: 8px;
-      align-items: center;
-      min-height: 40px;
-      padding: 7px;
-      border: 1px solid rgba(255, 255, 255, .07);
+    }
+
+    .bench-card {
+      min-height: 76px;
       border-radius: 8px;
-      background: rgba(255, 255, 255, .03);
+      border: 1px solid rgba(255, 255, 255, .14);
+      background: #111722;
+      display: grid;
+      place-items: center;
+      position: relative;
+    }
+
+    .bench-card.selected {
+      outline: 3px solid #fff;
+      outline-offset: -4px;
+    }
+
+    .upgrade-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .upgrade {
+      min-height: 76px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, .05);
+      border: 1px solid rgba(255, 255, 255, .1);
+      display: grid;
+      gap: 4px;
+      padding: 8px;
+      align-content: center;
+      text-align: center;
     }
 
     .small {
       color: var(--muted);
       font-size: 12px;
       line-height: 1.35;
-    }
-
-    .bar-list {
-      display: grid;
-      gap: 8px;
-    }
-
-    .bar {
-      display: grid;
-      grid-template-columns: 74px 1fr 48px;
-      align-items: center;
-      gap: 7px;
-      font-size: 12px;
-      color: var(--muted);
-    }
-
-    .track {
-      height: 10px;
-      border-radius: 999px;
-      background: #0e121a;
-      overflow: hidden;
-    }
-
-    .fill {
-      width: 0;
-      height: 100%;
-      border-radius: inherit;
-      background: linear-gradient(90deg, #ff6a59, #f6c84c, #65d279, #5eb5ff);
-      transition: width .18s ease;
-    }
-
-    .bottom-sheet {
-      position: fixed;
-      left: 50%;
-      bottom: 10px;
-      transform: translateX(-50%);
-      width: min(820px, calc(100% - 20px));
-      min-height: 58px;
-      display: grid;
-      grid-template-columns: 1fr auto;
-      align-items: center;
-      gap: 10px;
-      padding: 10px;
-      border: 1px solid rgba(255, 255, 255, .14);
-      border-radius: 8px;
-      background: rgba(13, 16, 22, .94);
-      box-shadow: 0 14px 50px rgba(0, 0, 0, .5);
-      backdrop-filter: blur(12px);
-      z-index: 5;
+      font-weight: 700;
     }
 
     .toast {
@@ -363,685 +318,703 @@
       left: 50%;
       top: 72px;
       transform: translateX(-50%);
-      min-width: min(420px, calc(100% - 24px));
+      z-index: 20;
       min-height: 42px;
+      min-width: min(430px, calc(100% - 24px));
       display: none;
       align-items: center;
       justify-content: center;
       padding: 9px 12px;
       border-radius: 8px;
-      background: rgba(0, 0, 0, .78);
-      border: 1px solid rgba(255, 255, 255, .14);
-      z-index: 8;
+      background: rgba(0, 0, 0, .8);
+      border: 1px solid rgba(255, 255, 255, .16);
       text-align: center;
-      font-weight: 800;
+      font-weight: 900;
     }
 
     .toast.show { display: flex; }
 
-    .mobile-toggle { display: none; }
-
-    @media (max-width: 860px) {
-      .app {
-        grid-template-columns: 1fr;
-        padding-bottom: 102px;
+    @media (max-width: 900px) {
+      header { grid-template-columns: 1fr; }
+      .hud { justify-content: flex-start; }
+      .battlefield {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
       }
-
-      header {
-        grid-template-columns: 1fr;
+      .lane { min-height: 360px; }
+      .lane-head {
+        left: 7px;
+        right: 7px;
+        top: 7px;
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 2px;
+        font-size: 11px;
       }
-
-      .topline { justify-content: flex-start; }
-
-      aside {
-        position: fixed;
-        right: 10px;
-        top: 128px;
-        width: min(320px, calc(100vw - 20px));
-        max-height: calc(100vh - 220px);
-        overflow: auto;
-        z-index: 6;
-        transform: translateX(calc(100% + 20px));
-        transition: transform .18s ease;
+      .slots {
+        inset: 22% 13%;
+        gap: 6px;
       }
-
-      aside.open { transform: translateX(0); }
-
-      .mobile-toggle {
-        display: inline-flex;
-        position: fixed;
-        right: 12px;
-        top: 78px;
-        z-index: 7;
-        min-width: 44px;
-        min-height: 44px;
-        border-radius: 8px;
-        background: #f6c84c;
-        color: #21160c;
-        align-items: center;
-        justify-content: center;
-        font-weight: 900;
+      .slots.right {
+        inset: 27% 15%;
       }
-
-      .tile { gap: 4px; }
-      .zone { padding: 8px; }
-      .grid { gap: 5px; }
-      .bottom-sheet { grid-template-columns: 1fr; }
+      .unit {
+        width: min(52px, 84%);
+      }
+      .unit::after {
+        top: 4px;
+        right: 4px;
+        width: 20px;
+        height: 20px;
+        font-size: 11px;
+      }
+      .controls { grid-template-columns: 1fr; }
+      .bench { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     }
   </style>
 </head>
 <body>
-  <button class="mobile-toggle" id="panelToggle" aria-label="패널 열기">☰</button>
   <div class="app">
     <header>
       <div>
         <h1>배뽑디</h1>
-        <div class="small">배치 & 뽑기 디펜스</div>
+        <div class="subtitle">왼쪽 잡몹 순환 / 오른쪽 상자·보스 순환 2Way 디펜스</div>
       </div>
-      <div class="topline">
-        <div class="pill" id="roundPill">R 1 / 30</div>
-        <div class="pill" id="attrPill">속성: 무</div>
-        <div class="resource" id="silverCoin">🥈 5</div>
-        <div class="resource" id="goldCoin">🪙 0</div>
-        <div class="resource" id="diamondCoin">💎 0</div>
-        <div class="resource" id="bossCoin">👑 0</div>
-        <button class="btn" id="speedBtn" aria-label="배속">⏩ 1x</button>
+      <div class="hud">
+        <div class="pill" id="roundPill">R 1</div>
+        <div class="pill" id="coinPill">🥈 5</div>
+        <div class="pill" id="lifePill">❤️ 20</div>
+        <button class="btn" id="speedBtn">⏩ 1x</button>
+        <button class="btn red" id="restartBtn">↻</button>
       </div>
     </header>
 
-    <div class="banner" id="bossPreview">10R / 20R / 30R 보스 속성은 5라운드에 공개됩니다.</div>
+    <div class="status" id="statusText">1라운드 오른쪽에는 보물상자가 돌고 있습니다. 부수면 코인을 얻습니다.</div>
 
-    <main>
-      <section class="zone">
-        <div class="zone-head">
-          <span>🌀 잡몹 라인</span>
-          <span id="mobStatus">0 / 100</span>
+    <section class="battlefield">
+      <div class="lane" id="mobLane">
+        <div class="lane-head">
+          <span>🌀 왼쪽 잡몹 라인</span>
+          <span id="mobCount">0마리</span>
         </div>
-        <div class="grid" id="mobGrid"></div>
-      </section>
+        <canvas id="mobCanvas"></canvas>
+        <div class="slots" id="mobSlots"></div>
+      </div>
 
-      <section class="zone">
-        <div class="zone-head">
-          <span>⚡ 보스 라인</span>
-          <span id="bossStatus">대기 중</span>
+      <div class="lane" id="bossLane">
+        <div class="lane-head">
+          <span>💎 오른쪽 상자 / 보스 라인</span>
+          <span id="bossInfo">상자 HP 0</span>
         </div>
-        <div class="grid" id="bossGrid"></div>
-      </section>
+        <canvas id="bossCanvas"></canvas>
+        <div class="slots right" id="bossSlots"></div>
+      </div>
+    </section>
 
-      <section class="zone">
-        <div class="zone-head">
-          <span>📦 안전 대기석</span>
-          <span id="benchStatus">0 / 10</span>
+    <section class="controls">
+      <div class="panel">
+        <h2 class="panel-title">뽑기 & 대기석</h2>
+        <div style="display:flex; gap:8px; margin-bottom:9px; flex-wrap:wrap;">
+          <button class="btn primary" id="drawBtn">🎰 1코인 뽑기</button>
+          <button class="btn blue" id="sellBtn">💰 선택 판매</button>
         </div>
-        <div class="grid" id="benchGrid"></div>
-      </section>
-    </main>
+        <div class="bench" id="bench"></div>
+      </div>
 
-    <aside id="sidePanel">
-      <section class="panel">
-        <h2>뽑기 & 조작</h2>
-        <div class="panel-body">
-          <div class="actions">
-            <button class="btn primary" id="drawBtn">🎰 1뽑</button>
-            <button class="btn warn" id="sellBtn">💰 판매</button>
-            <button class="btn" id="newBtn">↻ 재시작</button>
-          </div>
-          <div class="small">유닛 선택 후 빈 칸을 터치하면 즉시 이동합니다. 안전 대기석은 공격하지 않습니다.</div>
-        </div>
-      </section>
-
-      <section class="panel">
-        <h2>원소 업그레이드</h2>
-        <div class="panel-body" id="upgradeBox"></div>
-      </section>
-
-      <section class="panel">
-        <h2>코인 쪼개기</h2>
-        <div class="panel-body">
-          <div class="exchange-row"><span>👑 보스</span><span>→ 💎💎</span><button class="btn" id="bossSplit">쪼개기</button></div>
-          <div class="exchange-row"><span>💎 다이아</span><span>→ 🪙🪙</span><button class="btn" id="diamondSplit">쪼개기</button></div>
-          <div class="exchange-row"><span>🪙 골드</span><span>→ 🥈🥈🥈</span><button class="btn" id="goldSplit">쪼개기</button></div>
-        </div>
-      </section>
-
-      <section class="panel">
-        <h2>실시간 DPS</h2>
-        <div class="panel-body">
-          <div class="bar-list" id="dpsBars"></div>
-        </div>
-      </section>
-    </aside>
+      <div class="panel">
+        <h2 class="panel-title">원소 업그레이드</h2>
+        <div class="upgrade-grid" id="upgrades"></div>
+      </div>
+    </section>
   </div>
 
-  <div class="bottom-sheet">
-    <div id="selectionInfo">유닛을 선택하면 능력치와 💀 누적 킬수가 표시됩니다.</div>
-    <div class="small" id="bestInfo">최고 기록 R1</div>
-  </div>
   <div class="toast" id="toast"></div>
 
   <script>
     const tiers = [
-      { key: "iron", name: "아이언", mark: "I", value: 1, dmg: 6 },
-      { key: "bronze", name: "브론즈", mark: "B", value: 2, dmg: 16 },
-      { key: "silver", name: "실버", mark: "S", value: 3, dmg: 42 },
-      { key: "gold", name: "골드", mark: "G", value: 4, dmg: 105 },
-      { key: "diamond", name: "다이아", mark: "D", value: 5, dmg: 240, splash: true },
-      { key: "legend", name: "전설", mark: "L", value: 6, dmg: 620, splash: true }
+      { key: "iron", label: "I", name: "아이언", dmg: 12, rate: .92 },
+      { key: "bronze", label: "B", name: "브론즈", dmg: 26, rate: .8 },
+      { key: "silver", label: "S", name: "실버", dmg: 58, rate: .72 },
+      { key: "gold", label: "G", name: "골드", dmg: 130, rate: .62 },
+      { key: "diamond", label: "D", name: "다이아", dmg: 280, rate: .56, splash: true },
+      { key: "legend", label: "L", name: "전설", dmg: 760, rate: .5, splash: true }
     ];
 
-    const elements = [
-      { key: "fire", name: "불", icon: "🔥", beats: "grass" },
-      { key: "water", name: "물", icon: "💧", beats: "fire" },
-      { key: "grass", name: "풀", icon: "🌿", beats: "water" }
-    ];
-
-    const zones = {
-      mob: { size: 20, grid: "mobGrid", cls: "mob" },
-      boss: { size: 10, grid: "bossGrid", cls: "boss" },
-      bench: { size: 10, grid: "benchGrid", cls: "safe" }
-    };
-
-    const affixes = [
-      { key: "hp", label: "❤️ 체력 증가", hp: 1.85, speed: 1, count: 1 },
-      { key: "fast", label: "⚡ 신속", hp: 1, speed: 1.8, count: 1 },
-      { key: "immune", label: "🛡️ 상태이상 면역", hp: 1.2, speed: 1.1, count: 1, immune: true },
-      { key: "swarm", label: "👥 대량 발생", hp: .58, speed: 1.1, count: 2.7 },
-      { key: "elite", label: "👹 소수 정예", hp: 4.4, speed: .72, count: .32 }
+    const elems = [
+      { key: "fire", icon: "🔥", name: "불", color: "#ff745f" },
+      { key: "water", icon: "💧", name: "물", color: "#62b9ff" },
+      { key: "grass", icon: "🌿", name: "풀", color: "#67df8d" }
     ];
 
     const state = {
-      units: [],
-      selected: null,
       round: 1,
-      time: 0,
+      coins: 5,
+      lives: 20,
       speed: 1,
-      gameOver: false,
-      won: false,
-      mobs: { count: 0, hp: 0, maxHp: 0, element: null, affix: null, spawnDebt: 0 },
-      boss: null,
-      coins: { silver: 5, gold: 0, diamond: 0, boss: 0 },
-      upgrades: { fire: 0, water: 0, grass: 0 },
-      dps: {},
-      bossPreview: [],
-      best: Number(localStorage.getItem("baebbopdiBestRound") || 1),
+      time: 0,
+      roundTime: 0,
       nextId: 1,
-      lastTick: performance.now()
+      selected: null,
+      gameOver: false,
+      units: [],
+      mobs: [],
+      shots: [],
+      chest: null,
+      boss: null,
+      upgrades: { fire: 0, water: 0, grass: 0 },
+      spawnTimer: 0,
+      last: performance.now(),
+      dirty: true
     };
 
-    const mobPath = [0, 1, 2, 3, 4, 9, 14, 19, 18, 17, 16, 15, 10, 5, 6, 7, 8, 13, 12, 11];
-
     const $ = (id) => document.getElementById(id);
+    const canvases = {
+      mob: $("mobCanvas"),
+      boss: $("bossCanvas")
+    };
+    const ctxs = {
+      mob: canvases.mob.getContext("2d"),
+      boss: canvases.boss.getContext("2d")
+    };
 
-    function toast(message) {
+    const mobSlotLayout = [
+      [.39, .34], [.61, .34], [.39, .50], [.61, .50], [.39, .66], [.61, .66]
+    ];
+    const bossSlotLayout = [
+      [.39, .40], [.61, .40], [.39, .60], [.61, .60]
+    ];
+
+    function toast(text) {
       const node = $("toast");
-      node.textContent = message;
+      node.textContent = text;
       node.classList.add("show");
       clearTimeout(toast.timer);
-      toast.timer = setTimeout(() => node.classList.remove("show"), 1600);
+      toast.timer = setTimeout(() => node.classList.remove("show"), 1300);
     }
 
-    function randomElement() {
-      return elements[Math.floor(Math.random() * elements.length)];
-    }
-
-    function roundElement() {
-      const r = Math.random();
-      if (r < .4) return null;
-      return elements[Math.floor((r - .4) / .2)] || elements[2];
-    }
-
-    function tierByKey(key) {
-      return tiers.find((tier) => tier.key === key);
-    }
-
-    function elementByKey(key) {
-      return elements.find((element) => element.key === key);
-    }
-
-    function unitAt(zone, index) {
-      return state.units.find((unit) => unit.zone === zone && unit.index === index);
-    }
-
-    function emptyIndex(zone) {
-      for (let i = 0; i < zones[zone].size; i++) {
-        if (!unitAt(zone, i)) return i;
+    function fitCanvas(canvas) {
+      const box = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const w = Math.max(1, Math.floor(box.width * dpr));
+      const h = Math.max(1, Math.floor(box.height * dpr));
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
       }
-      return -1;
+      return { w, h, dpr };
     }
 
-    function buildGrids() {
-      Object.entries(zones).forEach(([zone, info]) => {
-        const root = $(info.grid);
-        root.innerHTML = "";
-        root.style.gridTemplateRows = `repeat(${Math.ceil(info.size / 5)}, minmax(0, 1fr))`;
-        for (let i = 0; i < info.size; i++) {
-          const tile = document.createElement("button");
-          tile.className = `tile ${info.cls}`;
-          tile.dataset.zone = zone;
-          tile.dataset.index = i;
-          tile.setAttribute("aria-label", `${zone}-${i}`);
-          tile.addEventListener("click", () => onTile(zone, i));
-          root.appendChild(tile);
-        }
-      });
+    function pathPoint(canvas, t) {
+      const { width: w, height: h } = canvas;
+      const pad = Math.min(w, h) * .09;
+      const left = pad, right = w - pad, top = pad, bottom = h - pad;
+      const p = ((t % 1) + 1) % 1;
+      if (p < .25) return { x: left + (right - left) * (p / .25), y: top };
+      if (p < .5) return { x: right, y: top + (bottom - top) * ((p - .25) / .25) };
+      if (p < .75) return { x: right - (right - left) * ((p - .5) / .25), y: bottom };
+      return { x: left, y: bottom - (bottom - top) * ((p - .75) / .25) };
     }
 
-    function generateBossPreview() {
-      state.bossPreview = [...elements].sort(() => Math.random() - .5).map((element, idx) => ({
-        round: [10, 20, 30][idx],
-        element: element.key
-      }));
+    function slotPos(lane, slot) {
+      const canvas = canvases[lane];
+      const layout = lane === "mob" ? mobSlotLayout : bossSlotLayout;
+      const [x, y] = layout[slot];
+      return { x: canvas.width * x, y: canvas.height * y };
     }
 
-    function resetGame() {
-      Object.assign(state, {
-        units: [],
-        selected: null,
-        round: 1,
-        time: 0,
-        speed: 1,
-        gameOver: false,
-        won: false,
-        mobs: { count: 0, hp: 0, maxHp: 0, element: null, affix: null, spawnDebt: 0 },
-        boss: null,
-        coins: { silver: 5, gold: 0, diamond: 0, boss: 0 },
-        upgrades: { fire: 0, water: 0, grass: 0 },
-        dps: {},
-        nextId: 1,
-        lastTick: performance.now()
-      });
-      generateBossPreview();
-      startRound(1, true);
-      render();
-    }
-
-    function startRound(round, initial = false) {
-      state.round = round;
-      state.time = 0;
-      if (round > state.best) {
-        state.best = round;
-        localStorage.setItem("baebbopdiBestRound", round);
-      }
-      if (round > state.best) state.speed = 1;
-      const isBossRound = [10, 20, 30].includes(round);
-      const affix = !isBossRound && Math.random() < .13 ? affixes[Math.floor(Math.random() * affixes.length)] : null;
-      const attr = roundElement();
-      state.mobs = {
-        count: 0,
-        hp: 0,
-        maxHp: Math.round((30 + round * 15) * (affix?.hp || 1)),
-        element: attr?.key || null,
-        affix,
-        spawnDebt: 0
-      };
-      if (round === 5) revealBossPreview();
-      if ([10, 20, 30].includes(round)) spawnBoss(round);
-      if (!initial) {
-        state.coins.silver += affix ? 3 : 2;
-        toast(`${round}라운드 시작${affix ? ` · ${affix.label}` : ""}`);
-      }
-    }
-
-    function revealBossPreview() {
-      const text = state.bossPreview.map((boss) => {
-        const element = elementByKey(boss.element);
-        return `${boss.round}R ${element.icon}${element.name}`;
-      }).join("  /  ");
-      $("bossPreview").textContent = `보스 속성 예고: ${text}`;
-    }
-
-    function spawnBoss(round) {
-      const preview = state.bossPreview.find((boss) => boss.round === round);
-      const hpBase = round === 10 ? 1800 : round === 20 ? 7600 : 24000;
-      state.boss = {
-        round,
-        hp: hpBase,
-        maxHp: hpBase,
-        element: preview?.element || randomElement().key,
-        position: 0,
-        timer: 0,
-        deadline: round === 10 ? 6 : round === 20 ? 6 : 1.25,
-        finalSummon: 0
-      };
+    function randomElem() {
+      return elems[Math.floor(Math.random() * elems.length)];
     }
 
     function rollTier() {
-      const roll = Math.random();
-      if (roll > .995) return "legend";
-      if (roll > .975) return "diamond";
-      if (roll > .92) return "gold";
-      if (roll > .78) return "silver";
-      if (roll > .48) return "bronze";
-      return "iron";
+      const r = Math.random();
+      if (r > .992) return tiers[5];
+      if (r > .97) return tiers[4];
+      if (r > .9) return tiers[3];
+      if (r > .75) return tiers[2];
+      if (r > .48) return tiers[1];
+      return tiers[0];
     }
 
-    function drawUnit(tierKey = rollTier()) {
+    function tier(key) {
+      return tiers.find((item) => item.key === key);
+    }
+
+    function elem(key) {
+      return elems.find((item) => item.key === key);
+    }
+
+    function emptyBench() {
+      return state.units.filter((unit) => unit.lane === "bench").length < 8;
+    }
+
+    function slotUnit(lane, slot) {
+      return state.units.find((unit) => unit.lane === lane && unit.slot === slot);
+    }
+
+    function selectedUnit() {
+      return state.units.find((unit) => unit.id === state.selected);
+    }
+
+    function damage(unit) {
+      const base = tier(unit.tier).dmg;
+      return base * (1 + state.upgrades[unit.elem] * .16);
+    }
+
+    function reset() {
+      state.round = 1;
+      state.coins = 5;
+      state.lives = 30;
+      state.speed = 1;
+      state.time = 0;
+      state.roundTime = 0;
+      state.nextId = 1;
+      state.selected = null;
+      state.gameOver = false;
+      state.units = [];
+      state.mobs = [];
+      state.shots = [];
+      state.boss = null;
+      state.chest = makeChest();
+      state.upgrades = { fire: 0, water: 0, grass: 0 };
+      state.spawnTimer = 0;
+      state.dirty = true;
+      toast("새 게임 시작");
+      renderStatic();
+    }
+
+    function makeChest() {
+      return { hp: 450, maxHp: 450, t: .12, speed: .045, reward: 5, dead: false };
+    }
+
+    function makeBoss() {
+      const hp = 4300 + state.round * 520;
+      return { hp, maxHp: hp, t: .08, speed: .038 + state.round * .001, elem: randomElem().key };
+    }
+
+    function drawUnit() {
       if (state.gameOver) return;
-      if (state.coins.silver < 1) return toast("실버코인이 부족합니다.");
-      const index = emptyIndex("bench");
-      if (index < 0) return toast("안전 대기석이 가득 찼습니다.");
-      state.coins.silver -= 1;
-      const tier = tierByKey(tierKey);
-      const element = randomElement();
-      const roleRoll = Math.random();
+      if (state.coins < 1) return toast("코인이 부족합니다.");
+      if (!emptyBench()) return toast("대기석이 가득 찼습니다.");
+      const picked = rollTier();
+      const element = randomElem();
+      state.coins -= 1;
       state.units.push({
         id: state.nextId++,
-        zone: "bench",
-        index,
-        tier: tier.key,
-        element: element.key,
-        kills: 0,
-        role: roleRoll > .88 ? "stun" : roleRoll > .74 ? "slow" : "dps",
-        lastDps: 0
+        lane: "bench",
+        slot: null,
+        tier: picked.key,
+        elem: element.key,
+        cd: Math.random() * .4,
+        kills: 0
       });
-      render();
+      state.selected = state.units[state.units.length - 1].id;
+      state.dirty = true;
+      toast(`${picked.name} ${element.icon} 뽑음`);
+      renderStatic();
     }
 
     function sellSelected() {
-      const unit = state.units.find((item) => item.id === state.selected);
+      const unit = selectedUnit();
       if (!unit) return toast("판매할 유닛을 선택하세요.");
-      const tier = tierByKey(unit.tier);
-      if (tier.key === "gold") state.coins.gold += 1;
-      if (tier.key === "diamond") state.coins.diamond += 1;
-      if (tier.key === "legend") state.coins.diamond += 2;
-      if (tier.value <= 3) state.coins.silver += tier.value;
+      const value = Math.max(1, Math.floor(tier(unit.tier).dmg / 60));
+      state.coins += value;
       state.units = state.units.filter((item) => item.id !== unit.id);
       state.selected = null;
-      render();
+      state.dirty = true;
+      toast(`${value}코인 획득`);
+      renderStatic();
     }
 
-    function splitCoin(type) {
-      if (state.coins[type] < 1) return toast("쪼갤 코인이 없습니다.");
-      state.coins[type] -= 1;
-      if (type === "boss") state.coins.diamond += 2;
-      if (type === "diamond") state.coins.gold += 2;
-      if (type === "gold") state.coins.silver += 3;
-      render();
-    }
-
-    function upgradeCost(level) {
-      return Math.max(1, Math.floor(level / 3) + 1);
-    }
-
-    function upgradeElement(key) {
-      const cost = upgradeCost(state.upgrades[key]);
-      if (state.coins.silver < cost) return toast("실버코인이 부족합니다.");
-      state.coins.silver -= cost;
+    function upgrade(key) {
+      const level = state.upgrades[key];
+      const cost = Math.floor(level / 3) + 1;
+      if (state.coins < cost) return toast("코인이 부족합니다.");
+      state.coins -= cost;
       state.upgrades[key] += 1;
-      render();
+      state.dirty = true;
+      toast(`${elem(key).name} 공격력 강화`);
+      renderStatic();
     }
 
-    function onTile(zone, index) {
-      if (state.gameOver) return;
-      const unit = unitAt(zone, index);
-      if (unit) {
-        state.selected = unit.id;
-        render();
+    function placeUnit(lane, slot) {
+      const current = slotUnit(lane, slot);
+      if (current) {
+        state.selected = current.id;
+        state.dirty = true;
+        renderStatic();
         return;
       }
-      if (!state.selected) return;
-      const selected = state.units.find((item) => item.id === state.selected);
-      if (!selected) return;
-      selected.zone = zone;
-      selected.index = index;
-      toast(`${zone === "mob" ? "잡몹 라인" : zone === "boss" ? "보스 라인" : "안전 대기석"}으로 이동`);
-      render();
+      const unit = selectedUnit();
+      if (!unit) return toast("유닛을 먼저 선택하세요.");
+      unit.lane = lane;
+      unit.slot = slot;
+      state.selected = unit.id;
+      state.dirty = true;
+      toast(lane === "mob" ? "왼쪽 라인 배치" : "오른쪽 라인 배치");
+      renderStatic();
     }
 
-    function relationship(unitElement, targetElement) {
-      if (!targetElement) return 1;
-      const unit = elementByKey(unitElement);
-      if (unit.beats === targetElement) return 1.5;
-      const target = elementByKey(targetElement);
-      if (target.beats === unitElement) return .75;
-      return 1;
+    function makeMob() {
+      const hp = 66 + state.round * 24;
+      return {
+        id: state.nextId++,
+        hp,
+        maxHp: hp,
+        t: Math.random() * .08,
+        speed: .043 + state.round * .0028 + Math.random() * .01,
+        elem: randomElem().key,
+        size: 7 + Math.random() * 5
+      };
     }
 
-    function unitDamage(unit, targetElement) {
-      const tier = tierByKey(unit.tier);
-      const upgrade = state.upgrades[unit.element] * .12;
-      const roleMod = unit.role === "dps" ? 1 : unit.role === "slow" ? .62 : .48;
-      const splash = tier.splash ? 1.35 : 1;
-      return tier.dmg * (1 + upgrade) * relationship(unit.element, targetElement) * roleMod * splash;
-    }
-
-    function zoneDps(zone, targetElement) {
-      return state.units
-        .filter((unit) => unit.zone === zone)
-        .reduce((sum, unit) => sum + unitDamage(unit, targetElement), 0);
-    }
-
-    function ccFactor() {
-      if (!state.boss) return 1;
-      const bossUnits = state.units.filter((unit) => unit.zone === "boss");
-      const slow = bossUnits.filter((unit) => unit.role === "slow").length;
-      const stun = bossUnits.filter((unit) => unit.role === "stun").length;
-      return Math.max(.38, 1 - slow * .13 - stun * .2);
-    }
-
-    function distributeKills(zone, kills) {
-      const attackers = state.units.filter((unit) => unit.zone === zone);
-      if (!attackers.length) return;
-      for (let i = 0; i < kills; i++) {
-        attackers[i % attackers.length].kills += 1;
+    function nextRound() {
+      state.round += 1;
+      state.roundTime = 0;
+      if (state.round === 10) {
+        state.chest = null;
+        state.boss = makeBoss();
+        state.dirty = true;
+        toast("10라운드 보스 등장");
+      } else if (state.round < 10 && !state.chest) {
+        state.chest = makeChest();
+      } else {
+        state.coins += 2;
+        state.dirty = true;
+        toast(`${state.round}라운드 · 보상 2코인`);
       }
-    }
-
-    function tick(now) {
-      const dtRaw = Math.min(.08, (now - state.lastTick) / 1000);
-      state.lastTick = now;
-      if (!state.gameOver) update(dtRaw * state.speed);
-      render();
-      requestAnimationFrame(tick);
+      renderStatic();
     }
 
     function update(dt) {
+      if (state.gameOver) return;
       state.time += dt;
-      const roundLength = state.round === 30 ? 75 : 28;
-      const affix = state.mobs.affix;
-      const spawnRate = (1.05 + state.round * .055) * (affix?.count || 1) * (affix?.speed || 1);
-      if (![10, 20, 30].includes(state.round) || state.round === 30) {
-        state.mobs.spawnDebt += spawnRate * dt;
-        const toSpawn = Math.floor(state.mobs.spawnDebt);
-        if (toSpawn > 0) {
-          state.mobs.spawnDebt -= toSpawn;
-          state.mobs.count += toSpawn;
-          state.mobs.hp += toSpawn * state.mobs.maxHp;
+      state.roundTime += dt;
+
+      const spawnEvery = Math.max(.22, .68 - state.round * .018);
+      state.spawnTimer += dt;
+      while (state.spawnTimer >= spawnEvery) {
+        state.spawnTimer -= spawnEvery;
+        const amount = state.round < 4 ? 1 : state.round < 8 ? 2 : 3;
+        for (let i = 0; i < amount; i++) state.mobs.push(makeMob());
+      }
+
+      state.mobs.forEach((mob) => {
+        mob.t += mob.speed * dt;
+        if (mob.t >= 1) {
+          mob.t -= 1;
+          state.lives -= 1;
+          mob.hp += mob.maxHp * .45;
         }
-      }
-      if (state.round === 30 && state.boss) {
-        state.boss.finalSummon += dt;
-        if (state.boss.finalSummon > 7) {
-          state.boss.finalSummon = 0;
-          state.mobs.count += 18;
-          state.mobs.hp += 18 * state.mobs.maxHp;
-          toast("최종 보스가 잡몹을 소환했습니다.");
-        }
-      }
+      });
 
-      const mobDps = zoneDps("mob", state.mobs.element);
-      const mobKilled = Math.min(state.mobs.count, Math.floor((Math.min(state.mobs.hp, mobDps * dt) / Math.max(1, state.mobs.maxHp))));
-      state.mobs.hp = Math.max(0, state.mobs.hp - mobDps * dt);
-      state.mobs.count = Math.ceil(state.mobs.hp / Math.max(1, state.mobs.maxHp));
-      if (mobKilled > 0) distributeKills("mob", mobKilled);
+      if (state.chest) state.chest.t += state.chest.speed * dt;
+      if (state.boss) state.boss.t += state.boss.speed * dt;
 
-      if (state.boss) {
-        const shield = state.round === 30 && state.mobs.count > 0 ? .2 : 1;
-        const bossDps = zoneDps("boss", state.boss.element) * shield;
-        state.boss.hp = Math.max(0, state.boss.hp - bossDps * dt);
-        if (state.boss.hp <= 0) {
-          distributeKills("boss", 1);
-          if (state.boss.round < 30) state.coins.boss += 1;
-          else win();
-          state.boss = null;
-          toast("보스 처치 성공");
-        } else {
-          state.boss.timer += dt * ccFactor();
-          state.boss.position = Math.min(9, Math.floor((state.boss.timer / (state.boss.deadline * 28)) * 10));
-          if (state.boss.position >= 9 && state.boss.round !== 30) lose("보스가 데드라인에 도달했습니다.");
-        }
-      }
-
-      if (state.mobs.count > 100) lose("잡몹 100마리 제한을 초과했습니다.");
-      if (state.round === 30 && state.time >= roundLength && state.boss) lose("최종 보스 타이머가 종료되었습니다.");
-      if (state.time >= roundLength && !state.boss) {
-        if (state.round >= 30) win();
-        else startRound(state.round + 1);
-      }
-      if ((state.round === 20 || state.round === 30) && state.boss?.round === 10) lose("10라운드 보스를 제때 처치하지 못했습니다.");
-      if (state.round === 30 && state.boss?.round === 20) lose("20라운드 보스를 제때 처치하지 못했습니다.");
-    }
-
-    function lose(message) {
-      state.gameOver = true;
-      state.speed = 1;
-      toast(`패배: ${message}`);
-    }
-
-    function win() {
-      state.won = true;
-      state.gameOver = true;
-      state.speed = 1;
-      toast("30라운드 최종 보스 처치 성공");
-    }
-
-    function mobPacksFor(index) {
-      if (state.mobs.count <= 0) return [];
-      const packCount = Math.min(10, Math.ceil(state.mobs.count / 10));
-      const step = Math.floor(state.time * 3.2);
-      const packs = [];
-      for (let i = 0; i < packCount; i++) {
-        const pathIndex = mobPath[(step + i * 2) % mobPath.length];
-        if (pathIndex === index) {
-          const remaining = state.mobs.count - i * 10;
-          packs.push(Math.min(10, Math.max(1, remaining)));
-        }
-      }
-      return packs;
-    }
-
-    function renderTile(tile, unit, zone, index) {
-      tile.className = `tile ${zones[zone].cls}`;
-      if (state.selected && !unit) tile.classList.add("targetable");
-      if (unit?.id === state.selected) tile.classList.add("selected");
-      if (zone === "boss" && state.boss && state.boss.position === index) tile.classList.add("enemy");
-      if (zone === "mob" && mobPath.includes(index)) tile.classList.add("path");
-      if (zone === "boss" && [0, 1, 3, 4, 5, 7, 8, 9].includes(index)) tile.classList.add("path");
-      tile.innerHTML = "";
-      if (zone === "mob") {
-        mobPacksFor(index).forEach((count, order) => {
-          const enemy = document.createElement("span");
-          enemy.className = "mob-pack";
-          enemy.textContent = count;
-          enemy.style.transform = `translate(${order * 6 - 50}%, ${order * 6 - 50}%)`;
-          tile.appendChild(enemy);
-        });
-      }
-      if (!unit) return;
-      const tier = tierByKey(unit.tier);
-      const element = elementByKey(unit.element);
-      const node = document.createElement("div");
-      node.className = `unit tier-${tier.key}`;
-      node.innerHTML = `<span>${tier.mark}</span><span class="badge">${element.icon}</span><span class="rank-dot"></span>`;
-      tile.appendChild(node);
-    }
-
-    function render() {
-      Object.keys(zones).forEach((zone) => {
-        [...$(zones[zone].grid).children].forEach((tile, index) => {
-          renderTile(tile, unitAt(zone, index), zone, index);
+      state.units.filter((unit) => unit.lane !== "bench").forEach((unit) => {
+        unit.cd -= dt;
+        if (unit.cd > 0) return;
+        const target = findTarget(unit);
+        if (!target) return;
+        const t = tier(unit.tier);
+        unit.cd = t.rate;
+        const from = slotPos(unit.lane, unit.slot);
+        const to = targetPoint(unit.lane, target);
+        state.shots.push({
+          lane: unit.lane,
+          fromX: from.x,
+          fromY: from.y,
+          x: from.x,
+          y: from.y,
+          toX: to.x,
+          toY: to.y,
+          target,
+          unitId: unit.id,
+          dmg: damage(unit),
+          splash: !!t.splash,
+          color: elem(unit.elem).color,
+          life: 0
         });
       });
 
-      $("roundPill").textContent = `R ${state.round} / 30`;
-      const attr = state.mobs.element ? elementByKey(state.mobs.element) : null;
-      $("attrPill").textContent = `속성: ${attr ? `${attr.icon} ${attr.name}` : "무"}`;
-      $("silverCoin").textContent = `🥈 ${state.coins.silver}`;
-      $("goldCoin").textContent = `🪙 ${state.coins.gold}`;
-      $("diamondCoin").textContent = `💎 ${state.coins.diamond}`;
-      $("bossCoin").textContent = `👑 ${state.coins.boss}`;
-      $("mobStatus").textContent = `${state.mobs.count} / 100${state.mobs.affix ? ` · ${state.mobs.affix.label}` : ""}`;
-      $("benchStatus").textContent = `${state.units.filter((unit) => unit.zone === "bench").length} / 10`;
-      $("bossStatus").textContent = state.boss
-        ? `${elementByKey(state.boss.element).icon} HP ${Math.ceil(state.boss.hp)} / ${state.boss.maxHp}`
-        : "대기 중";
-      $("bestInfo").textContent = `최고 기록 R${state.best}${state.gameOver ? state.won ? " · 승리" : " · 패배" : ""}`;
-      $("speedBtn").textContent = `⏩ ${state.speed}x`;
-      $("speedBtn").disabled = state.round >= state.best;
+      updateShots(dt);
+      state.mobs = state.mobs.filter((mob) => mob.hp > 0);
 
-      if (state.round < 5) $("bossPreview").textContent = "10R / 20R / 30R 보스 속성은 5라운드에 공개됩니다.";
-      else revealBossPreview();
+      if (state.mobs.length > 115) lose("잡몹이 화면을 장악했습니다.");
+      if (state.lives <= 0) lose("라인이 무너졌습니다.");
+      if (state.roundTime > 24) nextRound();
+      if (state.boss && state.boss.hp <= 0) {
+        state.coins += 12;
+        state.boss = makeBoss();
+        state.dirty = true;
+        toast("보스 처치 · 12코인 획득");
+      }
+    }
 
+    function findTarget(unit) {
+      if (unit.lane === "mob") return state.mobs[0] || null;
+      if (state.boss) return state.boss;
+      return state.chest && !state.chest.dead ? state.chest : null;
+    }
+
+    function targetPoint(lane, target) {
+      if (lane === "mob") return pathPoint(canvases.mob, target.t);
+      return pathPoint(canvases.boss, target.t);
+    }
+
+    function updateShots(dt) {
+      state.shots.forEach((shot) => {
+        shot.life += dt * 5.5;
+        const p = Math.min(1, shot.life);
+        shot.x = shot.fromX + (shot.toX - shot.fromX) * p;
+        shot.y = shot.fromY + (shot.toY - shot.fromY) * p;
+        if (p < 1 || shot.hit) return;
+        shot.hit = true;
+        const unit = state.units.find((item) => item.id === shot.unitId);
+        if (!unit) return;
+        if (shot.lane === "mob") {
+          const target = shot.target;
+          if (target.hp > 0) {
+            target.hp -= shot.dmg;
+            if (shot.splash) state.mobs.slice(0, 5).forEach((mob) => { if (mob !== target) mob.hp -= shot.dmg * .35; });
+            if (target.hp <= 0) {
+              unit.kills += 1;
+              state.coins += Math.random() < .18 ? 1 : 0;
+              state.dirty = true;
+            }
+          }
+        } else if (state.boss) {
+          state.boss.hp -= shot.dmg;
+        } else if (state.chest) {
+          state.chest.hp -= shot.dmg;
+          if (state.chest.hp <= 0 && !state.chest.dead) {
+            state.chest.dead = true;
+            state.coins += state.chest.reward;
+            state.dirty = true;
+            toast(`보물상자 파괴 · ${state.chest.reward}코인`);
+            setTimeout(() => {
+              if (!state.boss && state.round < 10) {
+                state.chest = makeChest();
+                state.dirty = true;
+              }
+            }, 900);
+          }
+        }
+      });
+      state.shots = state.shots.filter((shot) => shot.life < 1.18);
+    }
+
+    function lose(text) {
+      state.gameOver = true;
+      state.speed = 1;
+      toast(`패배: ${text}`);
+      renderStatic();
+    }
+
+    function drawLane(lane) {
+      const canvas = canvases[lane];
+      const ctx = ctxs[lane];
+      const { dpr } = fitCanvas(canvas);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.save();
+      ctx.lineWidth = 5 * dpr;
+      ctx.strokeStyle = lane === "mob" ? "rgba(98,185,255,.52)" : "rgba(255,212,96,.55)";
+      ctx.setLineDash([12 * dpr, 12 * dpr]);
+      const pad = Math.min(canvas.width, canvas.height) * .09;
+      ctx.strokeRect(pad, pad, canvas.width - pad * 2, canvas.height - pad * 2);
+      ctx.setLineDash([]);
+      drawGridGlow(ctx, canvas, lane);
+      if (lane === "mob") drawMobs(ctx, canvas);
+      else drawRightTarget(ctx, canvas);
+      drawShots(ctx, lane);
+      ctx.restore();
+    }
+
+    function drawGridGlow(ctx, canvas, lane) {
+      ctx.globalAlpha = .11;
+      ctx.fillStyle = lane === "mob" ? "#62b9ff" : "#ffd460";
+      const layouts = lane === "mob" ? mobSlotLayout : bossSlotLayout;
+      layouts.forEach(([x, y]) => {
+        ctx.beginPath();
+        ctx.arc(canvas.width * x, canvas.height * y, 54, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+    }
+
+    function drawMobs(ctx, canvas) {
+      state.mobs.forEach((mob) => {
+        const p = pathPoint(canvas, mob.t);
+        const e = elem(mob.elem);
+        ctx.beginPath();
+        ctx.fillStyle = e.color;
+        ctx.shadowColor = e.color;
+        ctx.shadowBlur = 14;
+        ctx.arc(p.x, p.y, mob.size * (window.devicePixelRatio || 1), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        const hp = Math.max(0, mob.hp / mob.maxHp);
+        ctx.fillStyle = "rgba(0,0,0,.6)";
+        ctx.fillRect(p.x - 14, p.y - 18, 28, 4);
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(p.x - 14, p.y - 18, 28 * hp, 4);
+      });
+    }
+
+    function drawRightTarget(ctx, canvas) {
+      const target = state.boss || (state.chest && !state.chest.dead ? state.chest : null);
+      if (!target) return;
+      const p = pathPoint(canvas, target.t);
+      const isBoss = !!state.boss;
+      const color = isBoss ? "#ff5c70" : "#ffd460";
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(state.time * 2);
+      ctx.fillStyle = color;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 22;
+      if (isBoss) {
+        ctx.beginPath();
+        for (let i = 0; i < 8; i++) {
+          const a = i / 8 * Math.PI * 2;
+          const r = i % 2 ? 28 : 42;
+          ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+        }
+        ctx.closePath();
+        ctx.fill();
+      } else {
+        ctx.fillRect(-34, -28, 68, 56);
+        ctx.fillStyle = "rgba(0,0,0,.28)";
+        ctx.fillRect(-6, -28, 12, 56);
+      }
+      ctx.restore();
+      const hp = Math.max(0, target.hp / target.maxHp);
+      ctx.fillStyle = "rgba(0,0,0,.65)";
+      ctx.fillRect(p.x - 48, p.y + 48, 96, 8);
+      ctx.fillStyle = isBoss ? "#ff5c70" : "#ffd460";
+      ctx.fillRect(p.x - 48, p.y + 48, 96 * hp, 8);
+    }
+
+    function drawShots(ctx, lane) {
+      state.shots.filter((shot) => shot.lane === lane).forEach((shot) => {
+        ctx.strokeStyle = shot.color;
+        ctx.lineWidth = 4 * (window.devicePixelRatio || 1);
+        ctx.shadowColor = shot.color;
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.moveTo(shot.fromX, shot.fromY);
+        ctx.lineTo(shot.x, shot.y);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      });
+    }
+
+    function renderStatic() {
+      updateHud();
+      renderSlots("mob", $("mobSlots"), 6);
+      renderSlots("boss", $("bossSlots"), 4);
+      renderBench();
       renderUpgrades();
-      renderDps();
-      renderSelection();
+      state.dirty = false;
+    }
+
+    function updateHud() {
+      $("roundPill").textContent = `R ${state.round}`;
+      $("coinPill").textContent = `🥈 ${state.coins}`;
+      $("lifePill").textContent = `❤️ ${state.lives}`;
+      $("speedBtn").textContent = `⏩ ${state.speed}x`;
+      $("mobCount").textContent = `${state.mobs.length}마리`;
+      if (state.boss) $("bossInfo").textContent = `보스 HP ${Math.ceil(state.boss.hp)} / ${state.boss.maxHp}`;
+      else if (state.chest && !state.chest.dead) $("bossInfo").textContent = `상자 HP ${Math.max(0, Math.ceil(state.chest.hp))} / ${state.chest.maxHp}`;
+      else $("bossInfo").textContent = "상자 재등장 중";
+      $("statusText").textContent = state.gameOver
+        ? "게임 종료. 재시작으로 다시 도전하세요."
+        : state.round < 10
+          ? "오른쪽 보물상자를 부숴 코인을 벌고, 왼쪽 잡몹 압박은 업그레이드로 버티세요."
+          : "10라운드부터 오른쪽 상자가 사라지고 보스가 순환합니다.";
+    }
+
+    function renderSlots(lane, root, count) {
+      root.innerHTML = "";
+      for (let i = 0; i < count; i++) {
+        const button = document.createElement("button");
+        const unit = slotUnit(lane, i);
+        button.className = `slot${state.selected && !unit ? " ready" : ""}${unit?.id === state.selected ? " selected" : ""}`;
+        button.setAttribute("aria-label", `${lane}-${i + 1}`);
+        button.onclick = () => placeUnit(lane, i);
+        if (unit) button.appendChild(unitNode(unit));
+        root.appendChild(button);
+      }
+    }
+
+    function unitNode(unit) {
+      const t = tier(unit.tier);
+      const e = elem(unit.elem);
+      const node = document.createElement("div");
+      node.className = `unit tier-${unit.tier}`;
+      node.dataset.elem = e.icon;
+      node.textContent = t.label;
+      node.title = `${t.name} ${e.name} · 킬 ${unit.kills}`;
+      return node;
+    }
+
+    function renderBench() {
+      const root = $("bench");
+      root.innerHTML = "";
+      const units = state.units.filter((unit) => unit.lane === "bench");
+      for (let i = 0; i < 8; i++) {
+        const unit = units[i];
+        const button = document.createElement("button");
+        button.className = `bench-card${unit?.id === state.selected ? " selected" : ""}`;
+        button.setAttribute("aria-label", unit ? `${tier(unit.tier).name} ${elem(unit.elem).name}` : "빈 대기석");
+        button.onclick = () => {
+          if (unit) {
+            state.selected = unit.id;
+            renderStatic();
+          }
+        };
+        if (unit) button.appendChild(unitNode(unit));
+        else button.innerHTML = `<span class="small">빈칸</span>`;
+        root.appendChild(button);
+      }
     }
 
     function renderUpgrades() {
-      $("upgradeBox").innerHTML = elements.map((element) => {
-        const level = state.upgrades[element.key];
-        const cost = upgradeCost(level);
-        return `<div class="upgrade-row">
-          <span>${element.icon} ${element.name} Lv.${level}</span>
-          <span class="small">비용 ${cost}</span>
-          <button class="btn" data-upgrade="${element.key}">강화</button>
-        </div>`;
+      $("upgrades").innerHTML = elems.map((item) => {
+        const level = state.upgrades[item.key];
+        const cost = Math.floor(level / 3) + 1;
+        return `<button class="upgrade" data-up="${item.key}">
+          <strong>${item.icon} ${item.name} Lv.${level}</strong>
+          <span class="small">비용 ${cost} · 피해 +16%</span>
+        </button>`;
       }).join("");
-      document.querySelectorAll("[data-upgrade]").forEach((button) => {
-        button.onclick = () => upgradeElement(button.dataset.upgrade);
+      document.querySelectorAll("[data-up]").forEach((button) => {
+        button.onclick = () => upgrade(button.dataset.up);
       });
     }
 
-    function renderDps() {
-      const rows = state.units
-        .filter((unit) => unit.zone !== "bench")
-        .map((unit) => {
-          const target = unit.zone === "mob" ? state.mobs.element : state.boss?.element;
-          const dps = Math.round(unitDamage(unit, target));
-          unit.lastDps = dps;
-          return { unit, dps };
-        })
-        .sort((a, b) => b.dps - a.dps)
-        .slice(0, 8);
-      const max = Math.max(1, ...rows.map((row) => row.dps));
-      $("dpsBars").innerHTML = rows.length ? rows.map(({ unit, dps }) => {
-        const tier = tierByKey(unit.tier);
-        const element = elementByKey(unit.element);
-        return `<div class="bar">
-          <span>${tier.mark} ${element.icon}</span>
-          <span class="track"><span class="fill" style="width:${Math.max(4, dps / max * 100)}%"></span></span>
-          <span>${dps}</span>
-        </div>`;
-      }).join("") : `<div class="small">필드에 유닛을 배치하면 DPS가 표시됩니다.</div>`;
+    function loop(now) {
+      const raw = Math.min(.05, (now - state.last) / 1000);
+      state.last = now;
+      update(raw * state.speed);
+      drawLane("mob");
+      drawLane("boss");
+      updateHud();
+      if (state.dirty) renderStatic();
+      requestAnimationFrame(loop);
     }
 
-    function renderSelection() {
-      const unit = state.units.find((item) => item.id === state.selected);
-      if (!unit) {
-        $("selectionInfo").textContent = "유닛을 선택하면 능력치와 💀 누적 킬수가 표시됩니다.";
-        return;
-      }
-      const tier = tierByKey(unit.tier);
-      const element = elementByKey(unit.element);
-      const role = unit.role === "slow" ? "슬로우" : unit.role === "stun" ? "스턴" : "딜러";
-      $("selectionInfo").textContent = `${tier.name} ${element.icon}${element.name} · ${role} · DPS ${Math.round(unit.lastDps || unitDamage(unit, state.mobs.element))} · 💀 ${unit.kills}`;
-    }
-
-    $("drawBtn").onclick = () => drawUnit();
+    $("drawBtn").onclick = drawUnit;
     $("sellBtn").onclick = sellSelected;
-    $("newBtn").onclick = resetGame;
-    $("bossSplit").onclick = () => splitCoin("boss");
-    $("diamondSplit").onclick = () => splitCoin("diamond");
-    $("goldSplit").onclick = () => splitCoin("gold");
+    $("restartBtn").onclick = reset;
     $("speedBtn").onclick = () => {
-      if (state.round < state.best) state.speed = state.speed === 1 ? 2 : 1;
-      render();
+      state.speed = state.speed === 1 ? 2 : 1;
+      renderStatic();
     };
-    $("panelToggle").onclick = () => $("sidePanel").classList.toggle("open");
+    window.addEventListener("resize", renderStatic);
 
-    buildGrids();
-    resetGame();
-    requestAnimationFrame(tick);
+    reset();
+    requestAnimationFrame(loop);
   </script>
 </body>
 </html>
