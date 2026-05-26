@@ -411,7 +411,7 @@
         <div class="pill" id="roundPill">R 1</div>
         <div class="pill" id="attrPill">속성 무</div>
         <div class="pill" id="coinPill">🪨 0 · I 0 · B 0 · 🥈 5</div>
-        <div class="pill" id="lifePill">❤️ 50</div>
+        <div class="pill" id="limitPill">🌀 0 / 100</div>
         <button class="btn" id="speedBtn">⏩ 1x</button>
         <button class="btn red" id="restartBtn">↻</button>
       </div>
@@ -499,7 +499,6 @@
     const state = {
       round: 1,
       coins: { stone: 0, iron: 0, bronze: 0, silver: 5, gold: 0, diamond: 0, boss: 0 },
-      lives: 50,
       speed: 1,
       time: 0,
       roundTime: 0,
@@ -659,7 +658,6 @@
       Object.assign(state, {
         round: 1,
         coins: { stone: 0, iron: 0, bronze: 0, silver: 5, gold: 0, diamond: 0, boss: 0 },
-        lives: 50,
         speed: 1,
         time: 0,
         roundTime: 0,
@@ -885,7 +883,6 @@
         mob.t += mob.speed * dt;
         if (mob.t >= 1) {
           mob.t -= 1;
-          state.lives -= 1;
           mob.hp += mob.maxHp * .45;
         }
       });
@@ -951,8 +948,7 @@
       state.effects = state.effects.filter((effect) => effect.age < .45);
       state.mobs = state.mobs.filter((mob) => mob.hp > 0);
 
-      if (state.mobs.length > 115) lose("잡몹이 화면을 장악했습니다.");
-      if (state.lives <= 0) lose("라인이 무너졌습니다.");
+      if (state.mobs.length >= 100) lose("잡몹이 100마리에 도달했습니다.");
       if (state.roundTime > ROUND_SECONDS) nextRound();
       if (state.boss && state.boss.hp <= 0 && !state.boss.dead) {
         state.boss.dead = true;
@@ -1178,7 +1174,7 @@
       const attr = state.roundElement ? `${elem(state.roundElement).icon} ${elem(state.roundElement).name}` : "무";
       $("attrPill").textContent = `속성 ${attr}${state.affix ? ` · ${state.affix.label}` : ""}`;
       $("coinPill").textContent = coinText();
-      $("lifePill").textContent = `❤️ ${state.lives}`;
+      $("limitPill").textContent = `🌀 ${state.mobs.length} / 100`;
       $("speedBtn").textContent = `⏩ ${state.speed}x`;
       $("mobCount").textContent = `${state.mobs.length}마리 · 잔여 ${state.wave?.remaining || 0}`;
       if (state.boss && !state.boss.dead) {
@@ -1210,11 +1206,10 @@
     function unitNode(unit) {
       const t = tier(unit.tier);
       const e = elem(unit.elem);
-      const role = unit.role === "slow" ? "S" : unit.role === "stun" ? "T" : "";
       const node = document.createElement("div");
       node.className = `unit tier-${unit.tier}`;
       node.dataset.elem = e.icon;
-      node.textContent = `${t.label}${role}`;
+      node.textContent = t.label;
       node.title = `${t.name} ${e.name} · ${unit.role} · 킬 ${unit.kills}`;
       return node;
     }
