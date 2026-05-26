@@ -112,10 +112,11 @@
       background: linear-gradient(135deg, #ff5c70, #bb7cff);
     }
 
-    .btn:disabled {
-      opacity: .42;
-      cursor: not-allowed;
-      filter: grayscale(.7);
+    .btn.active {
+      outline: 3px solid rgba(255, 255, 255, .85);
+      outline-offset: -4px;
+      background: linear-gradient(135deg, #ff5c70, #ff9f52);
+      color: #fff;
     }
 
     .status {
@@ -174,17 +175,22 @@
 
     .slots {
       position: absolute;
-      inset: 19% 21%;
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      grid-template-rows: repeat(3, minmax(0, 1fr));
-      gap: 8px;
       z-index: 4;
+      display: grid;
     }
 
-    .slots.right {
+    #mobSlots {
+      inset: 24% 10%;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      grid-template-rows: repeat(4, minmax(0, 1fr));
+      gap: 5px;
+    }
+
+    #bossSlots {
       inset: 24% 24%;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       grid-template-rows: repeat(2, minmax(0, 1fr));
+      gap: 8px;
     }
 
     .slot {
@@ -209,34 +215,40 @@
       animation: pulse .75s ease-in-out infinite;
     }
 
+    .sell-mode .slot,
+    .sell-mode .bench-card {
+      border-color: rgba(255, 92, 112, .9);
+    }
+
     @keyframes pulse {
       50% { filter: brightness(1.35); }
     }
 
     .unit {
-      width: min(68px, 82%);
+      position: relative;
+      width: min(64px, 82%);
       aspect-ratio: 1;
       border-radius: 8px;
       border: 1px solid rgba(255, 255, 255, .45);
       display: grid;
       place-items: center;
       font-weight: 1000;
-      font-size: clamp(22px, 4vw, 34px);
+      font-size: clamp(20px, 3.2vw, 32px);
       text-shadow: 0 2px 10px rgba(0, 0, 0, .45);
     }
 
     .unit::after {
       content: attr(data-elem);
       position: absolute;
-      top: 7px;
-      right: 7px;
-      width: 24px;
-      height: 24px;
+      top: 5px;
+      right: 5px;
+      width: 21px;
+      height: 21px;
       border-radius: 50%;
       background: rgba(0, 0, 0, .5);
       display: grid;
       place-items: center;
-      font-size: 13px;
+      font-size: 12px;
     }
 
     .tier-iron { background: radial-gradient(circle, #8d939c, #4f5762); }
@@ -269,7 +281,7 @@
 
     .bench {
       display: grid;
-      grid-template-columns: repeat(6, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 8px;
     }
 
@@ -337,11 +349,8 @@
     @media (max-width: 900px) {
       header { grid-template-columns: 1fr; }
       .hud { justify-content: flex-start; }
-      .battlefield {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 8px;
-      }
-      .lane { min-height: 360px; }
+      .battlefield { grid-template-columns: 1fr; }
+      .lane { min-height: 430px; }
       .lane-head {
         left: 7px;
         right: 7px;
@@ -351,16 +360,9 @@
         gap: 2px;
         font-size: 11px;
       }
-      .slots {
-        inset: 22% 13%;
-        gap: 6px;
-      }
-      .slots.right {
-        inset: 27% 15%;
-      }
-      .unit {
-        width: min(52px, 84%);
-      }
+      #mobSlots { inset: 23% 8%; gap: 4px; }
+      #bossSlots { inset: 27% 18%; }
+      .unit { width: min(52px, 84%); }
       .unit::after {
         top: 4px;
         right: 4px;
@@ -369,12 +371,11 @@
         font-size: 11px;
       }
       .controls { grid-template-columns: 1fr; }
-      .bench { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     }
   </style>
 </head>
 <body>
-  <div class="app">
+  <div class="app" id="app">
     <header>
       <div>
         <h1>배뽑디</h1>
@@ -382,14 +383,14 @@
       </div>
       <div class="hud">
         <div class="pill" id="roundPill">R 1</div>
-        <div class="pill" id="coinPill">🥈 5</div>
-        <div class="pill" id="lifePill">❤️ 20</div>
+        <div class="pill" id="coinPill">🥈 5 · 🪙 0 · 💎 0 · 👑 0</div>
+        <div class="pill" id="lifePill">❤️ 50</div>
         <button class="btn" id="speedBtn">⏩ 1x</button>
         <button class="btn red" id="restartBtn">↻</button>
       </div>
     </header>
 
-    <div class="status" id="statusText">1라운드 오른쪽에는 보물상자가 돌고 있습니다. 부수면 코인을 얻습니다.</div>
+    <div class="status" id="statusText">10라운드 전까지 오른쪽 보물상자 하나를 부숴 코인을 벌고, 왼쪽 잡몹 압박을 버티세요.</div>
 
     <section class="battlefield">
       <div class="lane" id="mobLane">
@@ -407,7 +408,7 @@
           <span id="bossInfo">상자 HP 0</span>
         </div>
         <canvas id="bossCanvas"></canvas>
-        <div class="slots right" id="bossSlots"></div>
+        <div class="slots" id="bossSlots"></div>
       </div>
     </section>
 
@@ -415,8 +416,8 @@
       <div class="panel">
         <h2 class="panel-title">뽑기 & 대기석</h2>
         <div style="display:flex; gap:8px; margin-bottom:9px; flex-wrap:wrap;">
-          <button class="btn primary" id="drawBtn">🎰 1코인 뽑기</button>
-          <button class="btn blue" id="sellBtn">💰 선택 판매</button>
+          <button class="btn primary" id="drawBtn">🎰 1실버 뽑기</button>
+          <button class="btn blue" id="sellBtn">💰 판매선택</button>
         </div>
         <div class="bench" id="bench"></div>
       </div>
@@ -424,6 +425,12 @@
       <div class="panel">
         <h2 class="panel-title">원소 업그레이드</h2>
         <div class="upgrade-grid" id="upgrades"></div>
+        <h2 class="panel-title" style="margin-top:12px;">코인 쪼개기</h2>
+        <div class="upgrade-grid">
+          <button class="upgrade" id="splitBoss"><strong>👑 → 💎💎</strong><span class="small">보스코인 분해</span></button>
+          <button class="upgrade" id="splitDiamond"><strong>💎 → 🪙🪙</strong><span class="small">다이아코인 분해</span></button>
+          <button class="upgrade" id="splitGold"><strong>🪙 → 🥈🥈🥈</strong><span class="small">골드코인 분해</span></button>
+        </div>
       </div>
     </section>
   </div>
@@ -441,26 +448,30 @@
     ];
 
     const elems = [
-      { key: "fire", icon: "🔥", name: "불", color: "#ff745f" },
+      { key: "fire", icon: "🔥", name: "불", color: "#ff5c70" },
       { key: "water", icon: "💧", name: "물", color: "#62b9ff" },
       { key: "grass", icon: "🌿", name: "풀", color: "#67df8d" }
     ];
 
     const state = {
       round: 1,
-      coins: 5,
-      lives: 20,
+      coins: { silver: 5, gold: 0, diamond: 0, boss: 0 },
+      lives: 50,
       speed: 1,
       time: 0,
       roundTime: 0,
       nextId: 1,
       selected: null,
+      sellMode: false,
       gameOver: false,
       units: [],
       mobs: [],
       shots: [],
+      effects: [],
       chest: null,
+      chestClaimed: false,
       boss: null,
+      bossDefeated: false,
       upgrades: { fire: 0, water: 0, grass: 0 },
       spawnTimer: 0,
       last: performance.now(),
@@ -468,21 +479,14 @@
     };
 
     const $ = (id) => document.getElementById(id);
-    const canvases = {
-      mob: $("mobCanvas"),
-      boss: $("bossCanvas")
-    };
-    const ctxs = {
-      mob: canvases.mob.getContext("2d"),
-      boss: canvases.boss.getContext("2d")
-    };
-
-    const mobSlotLayout = [
-      [.39, .34], [.61, .34], [.39, .50], [.61, .50], [.39, .66], [.61, .66]
-    ];
-    const bossSlotLayout = [
-      [.39, .40], [.61, .40], [.39, .60], [.61, .60]
-    ];
+    const canvases = { mob: $("mobCanvas"), boss: $("bossCanvas") };
+    const ctxs = { mob: canvases.mob.getContext("2d"), boss: canvases.boss.getContext("2d") };
+    const mobSlotLayout = Array.from({ length: 20 }, (_, i) => {
+      const col = i % 5;
+      const row = Math.floor(i / 5);
+      return [.22 + col * .14, .33 + row * .105];
+    });
+    const bossSlotLayout = [[.39, .40], [.61, .40], [.39, .60], [.61, .60]];
 
     function toast(text) {
       const node = $("toast");
@@ -501,7 +505,7 @@
         canvas.width = w;
         canvas.height = h;
       }
-      return { w, h, dpr };
+      return { dpr };
     }
 
     function pathPoint(canvas, t) {
@@ -545,7 +549,7 @@
     }
 
     function emptyBench() {
-      return state.units.filter((unit) => unit.lane === "bench").length < 8;
+      return state.units.filter((unit) => unit.lane === "bench").length < 10;
     }
 
     function slotUnit(lane, slot) {
@@ -557,48 +561,59 @@
     }
 
     function damage(unit) {
-      const base = tier(unit.tier).dmg;
-      return base * (1 + state.upgrades[unit.elem] * .16);
+      return tier(unit.tier).dmg * (1 + state.upgrades[unit.elem] * .16);
+    }
+
+    function coinText() {
+      const c = state.coins;
+      return `🥈 ${c.silver} · 🪙 ${c.gold} · 💎 ${c.diamond} · 👑 ${c.boss}`;
     }
 
     function reset() {
-      state.round = 1;
-      state.coins = 5;
-      state.lives = 30;
-      state.speed = 1;
-      state.time = 0;
-      state.roundTime = 0;
-      state.nextId = 1;
-      state.selected = null;
-      state.gameOver = false;
-      state.units = [];
-      state.mobs = [];
-      state.shots = [];
-      state.boss = null;
-      state.chest = makeChest();
-      state.upgrades = { fire: 0, water: 0, grass: 0 };
-      state.spawnTimer = 0;
-      state.dirty = true;
+      Object.assign(state, {
+        round: 1,
+        coins: { silver: 5, gold: 0, diamond: 0, boss: 0 },
+        lives: 50,
+        speed: 1,
+        time: 0,
+        roundTime: 0,
+        nextId: 1,
+        selected: null,
+        sellMode: false,
+        gameOver: false,
+        units: [],
+        mobs: [],
+        shots: [],
+        effects: [],
+        chest: makeChest(),
+        chestClaimed: false,
+        boss: null,
+        bossDefeated: false,
+        upgrades: { fire: 0, water: 0, grass: 0 },
+        spawnTimer: 0,
+        last: performance.now(),
+        dirty: true
+      });
       toast("새 게임 시작");
       renderStatic();
     }
 
     function makeChest() {
-      return { hp: 450, maxHp: 450, t: .12, speed: .045, reward: 5, dead: false };
+      return { hp: 650, maxHp: 650, t: .12, speed: .045, reward: 8, dead: false };
     }
 
     function makeBoss() {
       const hp = 4300 + state.round * 520;
-      return { hp, maxHp: hp, t: .08, speed: .038 + state.round * .001, elem: randomElem().key };
+      return { hp, maxHp: hp, t: .08, speed: .04 + state.round * .001, elem: randomElem().key, dead: false };
     }
 
     function drawUnit() {
       if (state.gameOver) return;
-      if (state.coins < 1) return toast("코인이 부족합니다.");
+      if (state.coins.silver < 1) return toast("실버코인이 부족합니다.");
       if (!emptyBench()) return toast("대기석이 가득 찼습니다.");
       const picked = rollTier();
       const element = randomElem();
-      state.coins -= 1;
+      state.coins.silver -= 1;
       state.units.push({
         id: state.nextId++,
         lane: "bench",
@@ -609,28 +624,54 @@
         kills: 0
       });
       state.selected = state.units[state.units.length - 1].id;
+      state.sellMode = false;
       state.dirty = true;
       toast(`${picked.name} ${element.icon} 뽑음`);
       renderStatic();
     }
 
-    function sellSelected() {
-      const unit = selectedUnit();
-      if (!unit) return toast("판매할 유닛을 선택하세요.");
-      const value = Math.max(1, Math.floor(tier(unit.tier).dmg / 60));
-      state.coins += value;
+    function sellReward(unit) {
+      const t = tier(unit.tier);
+      if (t.key === "legend") return { type: "diamond", amount: 2, label: "💎 2" };
+      if (t.key === "diamond") return { type: "diamond", amount: 1, label: "💎 1" };
+      if (t.key === "gold") return { type: "gold", amount: 1, label: "🪙 1" };
+      const amount = t.key === "silver" ? 3 : t.key === "bronze" ? 2 : 1;
+      return { type: "silver", amount, label: `🥈 ${amount}` };
+    }
+
+    function sellUnit(unit) {
+      const reward = sellReward(unit);
+      state.coins[reward.type] += reward.amount;
       state.units = state.units.filter((item) => item.id !== unit.id);
+      if (state.selected === unit.id) state.selected = null;
+      state.dirty = true;
+      toast(`판매 완료 · ${reward.label}`);
+      renderStatic();
+    }
+
+    function toggleSellMode() {
+      state.sellMode = !state.sellMode;
       state.selected = null;
       state.dirty = true;
-      toast(`${value}코인 획득`);
+      toast(state.sellMode ? "판매할 유닛을 계속 터치하세요." : "판매선택 해제");
+      renderStatic();
+    }
+
+    function splitCoin(type) {
+      if (state.coins[type] < 1) return toast("쪼갤 코인이 없습니다.");
+      state.coins[type] -= 1;
+      if (type === "boss") state.coins.diamond += 2;
+      if (type === "diamond") state.coins.gold += 2;
+      if (type === "gold") state.coins.silver += 3;
+      state.dirty = true;
       renderStatic();
     }
 
     function upgrade(key) {
       const level = state.upgrades[key];
       const cost = Math.floor(level / 3) + 1;
-      if (state.coins < cost) return toast("코인이 부족합니다.");
-      state.coins -= cost;
+      if (state.coins.silver < cost) return toast("실버코인이 부족합니다.");
+      state.coins.silver -= cost;
       state.upgrades[key] += 1;
       state.dirty = true;
       toast(`${elem(key).name} 공격력 강화`);
@@ -640,6 +681,7 @@
     function placeUnit(lane, slot) {
       const current = slotUnit(lane, slot);
       if (current) {
+        if (state.sellMode) return sellUnit(current);
         state.selected = current.id;
         state.dirty = true;
         renderStatic();
@@ -650,19 +692,20 @@
       unit.lane = lane;
       unit.slot = slot;
       state.selected = unit.id;
+      state.sellMode = false;
       state.dirty = true;
       toast(lane === "mob" ? "왼쪽 라인 배치" : "오른쪽 라인 배치");
       renderStatic();
     }
 
     function makeMob() {
-      const hp = 66 + state.round * 24;
+      const hp = 70 + state.round * 25;
       return {
         id: state.nextId++,
         hp,
         maxHp: hp,
         t: Math.random() * .08,
-        speed: .043 + state.round * .0028 + Math.random() * .01,
+        speed: .045 + state.round * .003 + Math.random() * .01,
         elem: randomElem().key,
         size: 7 + Math.random() * 5
       };
@@ -671,18 +714,15 @@
     function nextRound() {
       state.round += 1;
       state.roundTime = 0;
+      state.coins.silver += 2;
       if (state.round === 10) {
         state.chest = null;
-        state.boss = makeBoss();
-        state.dirty = true;
+        if (!state.bossDefeated) state.boss = makeBoss();
         toast("10라운드 보스 등장");
-      } else if (state.round < 10 && !state.chest) {
-        state.chest = makeChest();
       } else {
-        state.coins += 2;
-        state.dirty = true;
-        toast(`${state.round}라운드 · 보상 2코인`);
+        toast(`${state.round}라운드 · 보상 🥈 2`);
       }
+      state.dirty = true;
       renderStatic();
     }
 
@@ -691,7 +731,7 @@
       state.time += dt;
       state.roundTime += dt;
 
-      const spawnEvery = Math.max(.22, .68 - state.round * .018);
+      const spawnEvery = Math.max(.24, .78 - state.round * .018);
       state.spawnTimer += dt;
       while (state.spawnTimer >= spawnEvery) {
         state.spawnTimer -= spawnEvery;
@@ -708,58 +748,87 @@
         }
       });
 
-      if (state.chest) state.chest.t += state.chest.speed * dt;
-      if (state.boss) state.boss.t += state.boss.speed * dt;
+      if (state.chest && !state.chest.dead) state.chest.t += state.chest.speed * dt;
+      if (state.boss && !state.boss.dead) state.boss.t += state.boss.speed * dt;
 
       state.units.filter((unit) => unit.lane !== "bench").forEach((unit) => {
         unit.cd -= dt;
         if (unit.cd > 0) return;
         const target = findTarget(unit);
         if (!target) return;
-        const t = tier(unit.tier);
-        unit.cd = t.rate;
         const from = slotPos(unit.lane, unit.slot);
         const to = targetPoint(unit.lane, target);
-        state.shots.push({
-          lane: unit.lane,
-          fromX: from.x,
-          fromY: from.y,
-          x: from.x,
-          y: from.y,
-          toX: to.x,
-          toY: to.y,
-          target,
-          unitId: unit.id,
-          dmg: damage(unit),
-          splash: !!t.splash,
-          color: elem(unit.elem).color,
-          life: 0
-        });
+        unit.cd = tier(unit.tier).rate;
+        if (unit.elem === "fire") {
+          hitTarget(unit, target, damage(unit), !!tier(unit.tier).splash);
+          state.effects.push({ lane: unit.lane, x: to.x, y: to.y, color: "#ff304d", age: 0, kind: "fire" });
+        } else {
+          state.shots.push({
+            lane: unit.lane,
+            fromX: from.x,
+            fromY: from.y,
+            x: from.x,
+            y: from.y,
+            toX: to.x,
+            toY: to.y,
+            target,
+            unitId: unit.id,
+            elem: unit.elem,
+            dmg: damage(unit),
+            splash: !!tier(unit.tier).splash,
+            color: elem(unit.elem).color,
+            life: 0
+          });
+        }
       });
 
       updateShots(dt);
+      state.effects.forEach((effect) => effect.age += dt);
+      state.effects = state.effects.filter((effect) => effect.age < .45);
       state.mobs = state.mobs.filter((mob) => mob.hp > 0);
 
       if (state.mobs.length > 115) lose("잡몹이 화면을 장악했습니다.");
       if (state.lives <= 0) lose("라인이 무너졌습니다.");
       if (state.roundTime > 24) nextRound();
-      if (state.boss && state.boss.hp <= 0) {
-        state.coins += 12;
-        state.boss = makeBoss();
+      if (state.boss && state.boss.hp <= 0 && !state.boss.dead) {
+        state.boss.dead = true;
+        state.bossDefeated = true;
+        state.coins.boss += 1;
+        toast("보스 처치 · 👑 1");
         state.dirty = true;
-        toast("보스 처치 · 12코인 획득");
       }
     }
 
     function findTarget(unit) {
       if (unit.lane === "mob") return state.mobs[0] || null;
-      if (state.boss) return state.boss;
+      if (state.boss && !state.boss.dead) return state.boss;
       return state.chest && !state.chest.dead ? state.chest : null;
     }
 
     function targetPoint(lane, target) {
-      if (lane === "mob") return pathPoint(canvases.mob, target.t);
-      return pathPoint(canvases.boss, target.t);
+      return pathPoint(canvases[lane], target.t);
+    }
+
+    function hitTarget(unit, target, dmg, splash) {
+      if (!target || target.hp <= 0) return;
+      target.hp -= dmg;
+      if (unit.lane === "mob" && splash) {
+        state.mobs.slice(0, 5).forEach((mob) => {
+          if (mob !== target) mob.hp -= dmg * .35;
+        });
+      }
+      if (unit.lane === "mob" && target.hp <= 0) {
+        unit.kills += 1;
+        if (Math.random() < .18) state.coins.silver += 1;
+        state.dirty = true;
+      }
+      if (target === state.chest && target.hp <= 0 && !target.dead) {
+        target.dead = true;
+        state.chestClaimed = true;
+        state.coins.silver += target.reward;
+        toast(`보물상자 파괴 · 🥈 ${target.reward}`);
+        state.dirty = true;
+      }
     }
 
     function updateShots(dt) {
@@ -772,34 +841,7 @@
         shot.hit = true;
         const unit = state.units.find((item) => item.id === shot.unitId);
         if (!unit) return;
-        if (shot.lane === "mob") {
-          const target = shot.target;
-          if (target.hp > 0) {
-            target.hp -= shot.dmg;
-            if (shot.splash) state.mobs.slice(0, 5).forEach((mob) => { if (mob !== target) mob.hp -= shot.dmg * .35; });
-            if (target.hp <= 0) {
-              unit.kills += 1;
-              state.coins += Math.random() < .18 ? 1 : 0;
-              state.dirty = true;
-            }
-          }
-        } else if (state.boss) {
-          state.boss.hp -= shot.dmg;
-        } else if (state.chest) {
-          state.chest.hp -= shot.dmg;
-          if (state.chest.hp <= 0 && !state.chest.dead) {
-            state.chest.dead = true;
-            state.coins += state.chest.reward;
-            state.dirty = true;
-            toast(`보물상자 파괴 · ${state.chest.reward}코인`);
-            setTimeout(() => {
-              if (!state.boss && state.round < 10) {
-                state.chest = makeChest();
-                state.dirty = true;
-              }
-            }, 900);
-          }
-        }
+        hitTarget(unit, shot.target, shot.dmg, shot.splash);
       });
       state.shots = state.shots.filter((shot) => shot.life < 1.18);
     }
@@ -827,6 +869,7 @@
       if (lane === "mob") drawMobs(ctx, canvas);
       else drawRightTarget(ctx, canvas);
       drawShots(ctx, lane);
+      drawEffects(ctx, lane);
       ctx.restore();
     }
 
@@ -836,7 +879,7 @@
       const layouts = lane === "mob" ? mobSlotLayout : bossSlotLayout;
       layouts.forEach(([x, y]) => {
         ctx.beginPath();
-        ctx.arc(canvas.width * x, canvas.height * y, 54, 0, Math.PI * 2);
+        ctx.arc(canvas.width * x, canvas.height * y, 34, 0, Math.PI * 2);
         ctx.fill();
       });
       ctx.globalAlpha = 1;
@@ -846,11 +889,12 @@
       state.mobs.forEach((mob) => {
         const p = pathPoint(canvas, mob.t);
         const e = elem(mob.elem);
+        const scale = window.devicePixelRatio || 1;
         ctx.beginPath();
         ctx.fillStyle = e.color;
         ctx.shadowColor = e.color;
         ctx.shadowBlur = 14;
-        ctx.arc(p.x, p.y, mob.size * (window.devicePixelRatio || 1), 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, mob.size * scale, 0, Math.PI * 2);
         ctx.fill();
         ctx.shadowBlur = 0;
         const hp = Math.max(0, mob.hp / mob.maxHp);
@@ -862,10 +906,10 @@
     }
 
     function drawRightTarget(ctx, canvas) {
-      const target = state.boss || (state.chest && !state.chest.dead ? state.chest : null);
+      const target = state.boss && !state.boss.dead ? state.boss : state.chest && !state.chest.dead ? state.chest : null;
       if (!target) return;
       const p = pathPoint(canvas, target.t);
-      const isBoss = !!state.boss;
+      const isBoss = !!(state.boss && !state.boss.dead);
       const color = isBoss ? "#ff5c70" : "#ffd460";
       ctx.save();
       ctx.translate(p.x, p.y);
@@ -891,47 +935,82 @@
       const hp = Math.max(0, target.hp / target.maxHp);
       ctx.fillStyle = "rgba(0,0,0,.65)";
       ctx.fillRect(p.x - 48, p.y + 48, 96, 8);
-      ctx.fillStyle = isBoss ? "#ff5c70" : "#ffd460";
+      ctx.fillStyle = color;
       ctx.fillRect(p.x - 48, p.y + 48, 96 * hp, 8);
     }
 
     function drawShots(ctx, lane) {
+      const scale = window.devicePixelRatio || 1;
       state.shots.filter((shot) => shot.lane === lane).forEach((shot) => {
-        ctx.strokeStyle = shot.color;
-        ctx.lineWidth = 4 * (window.devicePixelRatio || 1);
         ctx.shadowColor = shot.color;
         ctx.shadowBlur = 12;
-        ctx.beginPath();
-        ctx.moveTo(shot.fromX, shot.fromY);
-        ctx.lineTo(shot.x, shot.y);
-        ctx.stroke();
+        if (shot.elem === "grass") {
+          ctx.fillStyle = shot.color;
+          ctx.beginPath();
+          ctx.arc(shot.x, shot.y, 8 * scale, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "rgba(220,255,230,.8)";
+          ctx.lineWidth = 2 * scale;
+          ctx.stroke();
+        } else {
+          ctx.strokeStyle = shot.color;
+          ctx.lineWidth = 4 * scale;
+          ctx.beginPath();
+          ctx.moveTo(shot.fromX, shot.fromY);
+          ctx.lineTo(shot.x, shot.y);
+          ctx.stroke();
+        }
         ctx.shadowBlur = 0;
+      });
+    }
+
+    function drawEffects(ctx, lane) {
+      const scale = window.devicePixelRatio || 1;
+      state.effects.filter((effect) => effect.lane === lane).forEach((effect) => {
+        const p = effect.age / .45;
+        ctx.save();
+        ctx.globalAlpha = 1 - p;
+        ctx.strokeStyle = effect.color;
+        ctx.fillStyle = "rgba(255,48,77,.18)";
+        ctx.lineWidth = 4 * scale;
+        ctx.shadowColor = effect.color;
+        ctx.shadowBlur = 22;
+        ctx.beginPath();
+        ctx.arc(effect.x, effect.y, (18 + p * 26) * scale, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
       });
     }
 
     function renderStatic() {
       updateHud();
-      renderSlots("mob", $("mobSlots"), 6);
+      renderSlots("mob", $("mobSlots"), 20);
       renderSlots("boss", $("bossSlots"), 4);
       renderBench();
       renderUpgrades();
+      $("app").classList.toggle("sell-mode", state.sellMode);
+      $("sellBtn").classList.toggle("active", state.sellMode);
       state.dirty = false;
     }
 
     function updateHud() {
       $("roundPill").textContent = `R ${state.round}`;
-      $("coinPill").textContent = `🥈 ${state.coins}`;
+      $("coinPill").textContent = coinText();
       $("lifePill").textContent = `❤️ ${state.lives}`;
       $("speedBtn").textContent = `⏩ ${state.speed}x`;
       $("mobCount").textContent = `${state.mobs.length}마리`;
-      if (state.boss) $("bossInfo").textContent = `보스 HP ${Math.ceil(state.boss.hp)} / ${state.boss.maxHp}`;
+      if (state.boss && !state.boss.dead) $("bossInfo").textContent = `보스 HP ${Math.ceil(state.boss.hp)} / ${state.boss.maxHp}`;
       else if (state.chest && !state.chest.dead) $("bossInfo").textContent = `상자 HP ${Math.max(0, Math.ceil(state.chest.hp))} / ${state.chest.maxHp}`;
-      else $("bossInfo").textContent = "상자 재등장 중";
+      else if (state.round < 10) $("bossInfo").textContent = "상자 파괴 완료";
+      else $("bossInfo").textContent = state.bossDefeated ? "보스 처치 완료" : "보스 대기";
       $("statusText").textContent = state.gameOver
         ? "게임 종료. 재시작으로 다시 도전하세요."
-        : state.round < 10
-          ? "오른쪽 보물상자를 부숴 코인을 벌고, 왼쪽 잡몹 압박은 업그레이드로 버티세요."
-          : "10라운드부터 오른쪽 상자가 사라지고 보스가 순환합니다.";
+        : state.sellMode
+          ? "판매선택 중입니다. 유닛을 탭하면 계속 판매됩니다."
+          : state.round < 10
+            ? "오른쪽 보물상자는 10라운드 전 단 하나만 등장합니다. 부숴서 실버코인을 확보하세요."
+            : "10라운드부터 오른쪽에는 단 하나의 보스가 등장합니다.";
     }
 
     function renderSlots(lane, root, count) {
@@ -962,16 +1041,16 @@
       const root = $("bench");
       root.innerHTML = "";
       const units = state.units.filter((unit) => unit.lane === "bench");
-      for (let i = 0; i < 8; i++) {
+      for (let i = 0; i < 10; i++) {
         const unit = units[i];
         const button = document.createElement("button");
         button.className = `bench-card${unit?.id === state.selected ? " selected" : ""}`;
         button.setAttribute("aria-label", unit ? `${tier(unit.tier).name} ${elem(unit.elem).name}` : "빈 대기석");
         button.onclick = () => {
-          if (unit) {
-            state.selected = unit.id;
-            renderStatic();
-          }
+          if (!unit) return;
+          if (state.sellMode) return sellUnit(unit);
+          state.selected = unit.id;
+          renderStatic();
         };
         if (unit) button.appendChild(unitNode(unit));
         else button.innerHTML = `<span class="small">빈칸</span>`;
@@ -985,7 +1064,7 @@
         const cost = Math.floor(level / 3) + 1;
         return `<button class="upgrade" data-up="${item.key}">
           <strong>${item.icon} ${item.name} Lv.${level}</strong>
-          <span class="small">비용 ${cost} · 피해 +16%</span>
+          <span class="small">비용 🥈 ${cost} · 피해 +16%</span>
         </button>`;
       }).join("");
       document.querySelectorAll("[data-up]").forEach((button) => {
@@ -1005,12 +1084,15 @@
     }
 
     $("drawBtn").onclick = drawUnit;
-    $("sellBtn").onclick = sellSelected;
+    $("sellBtn").onclick = toggleSellMode;
     $("restartBtn").onclick = reset;
     $("speedBtn").onclick = () => {
       state.speed = state.speed === 1 ? 2 : 1;
       renderStatic();
     };
+    $("splitBoss").onclick = () => splitCoin("boss");
+    $("splitDiamond").onclick = () => splitCoin("diamond");
+    $("splitGold").onclick = () => splitCoin("gold");
     window.addEventListener("resize", renderStatic);
 
     reset();
