@@ -249,6 +249,20 @@
       font-size: 11px;
     }
 
+    .unit[data-special]::before {
+      content: attr(data-special);
+      position: absolute;
+      left: 5px;
+      bottom: 5px;
+      width: 21px;
+      height: 21px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, .52);
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+    }
+
     .tier-iron { background: radial-gradient(circle, #8d939c, #4f5762); }
     .tier-bronze { background: radial-gradient(circle, #d9a06b, #75452d); }
     .tier-silver { background: radial-gradient(circle, #fff, #aebdd0); color: #17202b; }
@@ -410,7 +424,7 @@
       <div class="hud">
         <div class="pill" id="roundPill">R 1</div>
         <div class="pill" id="attrPill">속성 무</div>
-        <div class="pill" id="coinPill">🪨 0 · ⚙️ 0 · 🟤 0 · 🥈 5</div>
+        <div class="pill" id="coinPill">🥈 5.000 · 🪙 0 · 💎 0 · 👑 0</div>
         <div class="pill" id="limitPill">🌀 0 / 100</div>
         <button class="btn" id="speedBtn">⏩ 1x</button>
         <button class="btn red" id="restartBtn">↻</button>
@@ -454,14 +468,14 @@
       <div class="panel">
         <h2 class="panel-title">원소 업그레이드</h2>
         <div class="upgrade-grid" id="upgrades"></div>
-        <h2 class="panel-title" style="margin-top:12px;">코인 교환</h2>
+        <h2 class="panel-title" style="margin-top:12px;">픽 & 특수유닛</h2>
         <div class="upgrade-grid">
-          <button class="upgrade" id="splitStone"><strong>🪨 → ⚙️ 모두</strong><span class="small">돌 2개당 아이언</span></button>
-          <button class="upgrade" id="splitIron"><strong>⚙️ → 🟤 모두</strong><span class="small">아이언 2개당 브론즈</span></button>
-          <button class="upgrade" id="splitBronze"><strong>🟤 → 🥈 모두</strong><span class="small">브론즈 2개당 실버</span></button>
-          <button class="upgrade" id="splitBoss"><strong>👑 → 💎💎</strong><span class="small">보스코인 분해</span></button>
-          <button class="upgrade" id="splitDiamond"><strong>💎 → 🪙🪙</strong><span class="small">다이아코인 분해</span></button>
-          <button class="upgrade" id="splitGold"><strong>🪙 → 🥈🥈</strong><span class="small">골드코인 분해</span></button>
+          <button class="upgrade" id="bossPick"><strong>👑 → D픽</strong><span class="small">다이아 유닛 확정</span></button>
+          <button class="upgrade" id="diamondPick"><strong>💎 → G픽</strong><span class="small">골드 유닛 확정</span></button>
+          <button class="upgrade" id="goldPick"><strong>🪙 → S픽</strong><span class="small">실버 유닛 확정</span></button>
+          <button class="upgrade" id="buySlow"><strong>💎 슬로우</strong><span class="small">특수유닛 구매</span></button>
+          <button class="upgrade" id="buyStun"><strong>💎 스턴</strong><span class="small">특수유닛 구매</span></button>
+          <button class="upgrade" id="buySplash"><strong>💎 광역</strong><span class="small">특수유닛 구매</span></button>
         </div>
         <h2 class="panel-title" style="margin-top:12px;">실시간 DPS</h2>
         <div class="dps-list" id="dpsList"></div>
@@ -500,7 +514,7 @@
 
     const state = {
       round: 1,
-      coins: { stone: 0, iron: 0, bronze: 0, silver: 5, gold: 0, diamond: 0, boss: 0 },
+      coins: { silver: 5, gold: 0, diamond: 0, boss: 0 },
       speed: 1,
       time: 0,
       roundTime: 0,
@@ -657,17 +671,17 @@
 
     function coinText() {
       const c = state.coins;
-      return `🪨 ${c.stone} · ⚙️ ${c.iron} · 🟤 ${c.bronze} · 🥈 ${c.silver} · 🪙 ${c.gold} · 💎 ${c.diamond} · 👑 ${c.boss}`;
+      return `🥈 ${c.silver.toFixed(3)} · 🪙 ${c.gold} · 💎 ${c.diamond} · 👑 ${c.boss}`;
     }
 
     function coinLabel(type) {
-      return { stone: "🪨", iron: "⚙️", bronze: "🟤", silver: "🥈", gold: "🪙", diamond: "💎", boss: "👑" }[type] || type;
+      return { silver: "🥈", gold: "🪙", diamond: "💎", boss: "👑" }[type] || type;
     }
 
     function reset() {
       Object.assign(state, {
         round: 1,
-        coins: { stone: 0, iron: 0, bronze: 0, silver: 5, gold: 0, diamond: 0, boss: 0 },
+        coins: { silver: 5, gold: 0, diamond: 0, boss: 0 },
         speed: 1,
         time: 0,
         roundTime: 0,
@@ -756,7 +770,6 @@
       if (!emptyBench()) return toast("대기석이 가득 찼습니다.");
       const picked = rollTier();
       const element = randomElem();
-      const roleRoll = Math.random();
       state.coins.silver -= 1;
       state.units.push({
         id: state.nextId++,
@@ -764,7 +777,7 @@
         slot: null,
         tier: picked.key,
         elem: element.key,
-        role: roleRoll > .88 ? "stun" : roleRoll > .72 ? "slow" : "dps",
+        role: "dps",
         cd: Math.random() * .4,
         kills: 0
       });
@@ -778,9 +791,9 @@
     function sellReward(unit) {
       const key = tier(unit.tier).key;
       if (key === "gold") return { type: "silver", amount: 1, label: "🥈 1" };
-      if (key === "silver") return { type: "bronze", amount: 1, label: "🟤 1" };
-      if (key === "bronze") return { type: "iron", amount: 1, label: "⚙️ 1" };
-      if (key === "iron") return { type: "stone", amount: 1, label: "🪨 1" };
+      if (key === "silver") return { type: "silver", amount: .5, label: "🥈 0.5" };
+      if (key === "bronze") return { type: "silver", amount: .25, label: "🥈 0.25" };
+      if (key === "iron") return { type: "silver", amount: .125, label: "🥈 0.125" };
       if (key === "diamond") return { type: "gold", amount: 1, label: "🪙 1" };
       return { type: "diamond", amount: 1, label: "💎 1" };
     }
@@ -842,21 +855,40 @@
       renderStatic();
     }
 
-    function convertCoin(from, to, fromAmount, toAmount) {
-      if (state.coins[from] < fromAmount) return toast("재료 코인이 부족합니다.");
-      state.coins[from] -= fromAmount;
-      state.coins[to] += toAmount;
+    function createBenchUnit(tierKey, role = "dps") {
+      if (!emptyBench()) return false;
+      const element = randomElem();
+      state.units.push({
+        id: state.nextId++,
+        lane: "bench",
+        slot: null,
+        tier: tierKey,
+        elem: element.key,
+        role,
+        cd: Math.random() * .4,
+        kills: 0
+      });
+      state.selected = state.units[state.units.length - 1].id;
+      state.sellMode = false;
       state.dirty = true;
+      return true;
+    }
+
+    function buyPick(costType, tierKey, label) {
+      if (state.coins[costType] < 1) return toast(`${coinLabel(costType)} 코인이 부족합니다.`);
+      if (!emptyBench()) return toast("대기석이 가득 찼습니다.");
+      state.coins[costType] -= 1;
+      createBenchUnit(tierKey, "dps");
+      toast(`${label} 획득`);
       renderStatic();
     }
 
-    function convertAllCoin(from, to, fromAmount, toAmount) {
-      const batches = Math.floor(state.coins[from] / fromAmount);
-      if (batches < 1) return toast("재료 코인이 부족합니다.");
-      state.coins[from] -= batches * fromAmount;
-      state.coins[to] += batches * toAmount;
-      state.dirty = true;
-      toast(`${coinLabel(to)} ${batches * toAmount}개 조합`);
+    function buySpecial(role) {
+      if (state.coins.diamond < 1) return toast("다이아코인이 부족합니다.");
+      if (!emptyBench()) return toast("대기석이 가득 찼습니다.");
+      state.coins.diamond -= 1;
+      createBenchUnit("silver", role);
+      toast(`${role === "slow" ? "슬로우" : role === "stun" ? "스턴" : "광역"} 특수유닛 획득`);
       renderStatic();
     }
 
@@ -979,8 +1011,9 @@
         const to = targetPoint(unit.lane, target);
         unit.cd = tier(unit.tier).rate;
         const dmg = baseDamage(unit, target.elem || target.element || null);
+        const isSplash = !!tier(unit.tier).splash || unit.role === "splash";
         if (unit.elem === "fire") {
-          hitTarget(unit, target, dmg, !!tier(unit.tier).splash);
+          hitTarget(unit, target, dmg, isSplash);
           state.effects.push({ lane: unit.lane, x: to.x, y: to.y, color: "#ff304d", age: 0, kind: "fire" });
         } else {
           state.shots.push({
@@ -995,7 +1028,7 @@
             unitId: unit.id,
             elem: unit.elem,
             dmg,
-            splash: !!tier(unit.tier).splash,
+            splash: isSplash,
             color: elem(unit.elem).color,
             life: 0
           });
@@ -1039,7 +1072,7 @@
       }
       if (unit.lane === "mob" && target.hp <= 0) {
         unit.kills += 1;
-        if (Math.random() < .18) state.coins.stone += 1;
+        if (Math.random() < .18) state.coins.silver += .125;
         state.dirty = true;
       }
       if (target === state.chest && target.hp <= 0 && !target.dead) {
@@ -1268,6 +1301,9 @@
       const node = document.createElement("div");
       node.className = `unit tier-${unit.tier}`;
       node.dataset.tier = t.label;
+      if (unit.role === "slow") node.dataset.special = "❄️";
+      if (unit.role === "stun") node.dataset.special = "⚡";
+      if (unit.role === "splash") node.dataset.special = "💥";
       node.textContent = e.icon;
       node.title = `${t.name} ${e.name} · ${unit.role} · 킬 ${unit.kills}`;
       return node;
@@ -1343,12 +1379,12 @@
       state.speed = state.speed === 1 ? 2 : 1;
       renderStatic();
     };
-    $("splitStone").onclick = () => convertAllCoin("stone", "iron", 2, 1);
-    $("splitIron").onclick = () => convertAllCoin("iron", "bronze", 2, 1);
-    $("splitBronze").onclick = () => convertAllCoin("bronze", "silver", 2, 1);
-    $("splitBoss").onclick = () => convertCoin("boss", "diamond", 1, 2);
-    $("splitDiamond").onclick = () => convertCoin("diamond", "gold", 1, 2);
-    $("splitGold").onclick = () => convertCoin("gold", "silver", 1, 2);
+    $("bossPick").onclick = () => buyPick("boss", "diamond", "다이아 픽");
+    $("diamondPick").onclick = () => buyPick("diamond", "gold", "골드 픽");
+    $("goldPick").onclick = () => buyPick("gold", "silver", "실버 픽");
+    $("buySlow").onclick = () => buySpecial("slow");
+    $("buyStun").onclick = () => buySpecial("stun");
+    $("buySplash").onclick = () => buySpecial("splash");
     window.addEventListener("resize", renderStatic);
 
     reset();
