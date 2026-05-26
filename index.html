@@ -1,0 +1,1014 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#151922">
+  <title>배뽑디 - 배치 & 뽑기 디펜스</title>
+  <style>
+    :root {
+      --bg: #101218;
+      --ink: #f5f7fb;
+      --muted: #aab3c5;
+      --panel: #1a1f2b;
+      --line: #30384a;
+      --danger: #ff5570;
+      --ok: #3ddc97;
+      --gold: #f6c84c;
+      --silver: #d9e2ef;
+      --blue: #5eb5ff;
+      --green: #65d279;
+      --red: #ff6a59;
+      --shadow: 0 20px 60px rgba(0, 0, 0, .32);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 16% 6%, rgba(255, 106, 89, .12), transparent 30%),
+        radial-gradient(circle at 85% 0%, rgba(94, 181, 255, .14), transparent 28%),
+        linear-gradient(135deg, #101218 0%, #151922 48%, #11161e 100%);
+      overflow-x: hidden;
+    }
+
+    button {
+      border: 0;
+      color: inherit;
+      font: inherit;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .app {
+      width: min(1200px, 100%);
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: max(12px, env(safe-area-inset-top)) 12px max(86px, env(safe-area-inset-bottom));
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 300px;
+      gap: 12px;
+    }
+
+    header {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 10px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(24px, 4vw, 42px);
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .topline {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+      align-items: center;
+    }
+
+    .pill, .resource, .meter {
+      min-height: 36px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(26, 31, 43, .82);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, .16);
+      white-space: nowrap;
+    }
+
+    .banner {
+      grid-column: 1 / -1;
+      min-height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 12px;
+      border: 1px solid rgba(246, 200, 76, .44);
+      border-radius: 8px;
+      background: linear-gradient(90deg, rgba(246, 200, 76, .13), rgba(94, 181, 255, .12), rgba(101, 210, 121, .12));
+      color: #fff9db;
+      text-align: center;
+      font-weight: 800;
+    }
+
+    main {
+      display: grid;
+      grid-template-rows: auto auto auto;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .zone {
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(26, 31, 43, .88);
+      box-shadow: var(--shadow);
+      min-width: 0;
+    }
+
+    .zone-head {
+      min-height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-weight: 800;
+      font-size: 13px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    .tile {
+      position: relative;
+      aspect-ratio: 1 / 1;
+      min-width: 0;
+      border: 1px solid rgba(255, 255, 255, .08);
+      border-radius: 7px;
+      background: #111722;
+      overflow: hidden;
+      transition: transform .12s ease, border-color .12s ease, filter .12s ease;
+    }
+
+    .tile.safe { background: linear-gradient(145deg, #182435, #101722); }
+    .tile.mob { background: linear-gradient(145deg, #1c2630, #111820); }
+    .tile.boss { background: linear-gradient(145deg, #2a1b25, #121820); }
+    .tile.targetable { border-color: rgba(94, 181, 255, .75); }
+    .tile.selected { outline: 3px solid #fff; outline-offset: -4px; animation: blink .82s ease-in-out infinite; }
+    .tile.enemy::after {
+      content: "";
+      position: absolute;
+      inset: 28%;
+      border-radius: 50%;
+      background: var(--danger);
+      box-shadow: 0 0 18px var(--danger);
+    }
+    .tile.path::before {
+      content: "";
+      position: absolute;
+      inset: 5px;
+      border: 2px dashed rgba(255, 255, 255, .16);
+      border-radius: 6px;
+    }
+
+    @keyframes blink {
+      50% { filter: brightness(1.35); }
+    }
+
+    .unit {
+      position: absolute;
+      inset: 5px;
+      border-radius: 7px;
+      border: 1px solid rgba(255, 255, 255, .35);
+      display: grid;
+      place-items: center;
+      font-size: clamp(18px, 5vw, 30px);
+      font-weight: 900;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, .45);
+    }
+
+    .tier-iron { background: radial-gradient(circle, #858b92, #4d535b); }
+    .tier-bronze { background: radial-gradient(circle, #c7905e, #6b4432); }
+    .tier-silver { background: radial-gradient(circle, #ffffff, #b7c4d7); color: #17202c; }
+    .tier-gold { background: radial-gradient(circle, #fff3a7, #d59520); color: #21180c; }
+    .tier-diamond { background: radial-gradient(circle, #c8fbff, #4ca8ff); color: #071b2d; }
+    .tier-legend { background: radial-gradient(circle, #ff8bd1, #b7214f 58%, #4a1834); }
+
+    .badge {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      width: 22px;
+      height: 22px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, .42);
+      font-size: 13px;
+    }
+
+    .rank-dot {
+      position: absolute;
+      bottom: 4px;
+      left: 5px;
+      right: 5px;
+      height: 4px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .7);
+    }
+
+    aside {
+      display: grid;
+      gap: 12px;
+      align-content: start;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(26, 31, 43, .9);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel h2 {
+      margin: 0;
+      padding: 12px;
+      font-size: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .panel-body {
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .btn {
+      min-height: 42px;
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+      padding: 8px;
+      border-radius: 8px;
+      background: #2a3345;
+      font-weight: 900;
+    }
+
+    .btn.primary { background: linear-gradient(135deg, #f6c84c, #ff7f50); color: #21160c; }
+    .btn.good { background: linear-gradient(135deg, #3ddc97, #5eb5ff); color: #06151d; }
+    .btn.warn { background: linear-gradient(135deg, #ff5570, #b069ff); }
+    .btn:disabled { opacity: .42; cursor: not-allowed; filter: grayscale(.5); }
+
+    .upgrade-row, .exchange-row {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 8px;
+      align-items: center;
+      min-height: 40px;
+      padding: 7px;
+      border: 1px solid rgba(255, 255, 255, .07);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, .03);
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .bar-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .bar {
+      display: grid;
+      grid-template-columns: 74px 1fr 48px;
+      align-items: center;
+      gap: 7px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .track {
+      height: 10px;
+      border-radius: 999px;
+      background: #0e121a;
+      overflow: hidden;
+    }
+
+    .fill {
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #ff6a59, #f6c84c, #65d279, #5eb5ff);
+      transition: width .18s ease;
+    }
+
+    .bottom-sheet {
+      position: fixed;
+      left: 50%;
+      bottom: 10px;
+      transform: translateX(-50%);
+      width: min(820px, calc(100% - 20px));
+      min-height: 58px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      border: 1px solid rgba(255, 255, 255, .14);
+      border-radius: 8px;
+      background: rgba(13, 16, 22, .94);
+      box-shadow: 0 14px 50px rgba(0, 0, 0, .5);
+      backdrop-filter: blur(12px);
+      z-index: 5;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      top: 72px;
+      transform: translateX(-50%);
+      min-width: min(420px, calc(100% - 24px));
+      min-height: 42px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 9px 12px;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, .78);
+      border: 1px solid rgba(255, 255, 255, .14);
+      z-index: 8;
+      text-align: center;
+      font-weight: 800;
+    }
+
+    .toast.show { display: flex; }
+
+    .mobile-toggle { display: none; }
+
+    @media (max-width: 860px) {
+      .app {
+        grid-template-columns: 1fr;
+        padding-bottom: 102px;
+      }
+
+      header {
+        grid-template-columns: 1fr;
+      }
+
+      .topline { justify-content: flex-start; }
+
+      aside {
+        position: fixed;
+        right: 10px;
+        top: 128px;
+        width: min(320px, calc(100vw - 20px));
+        max-height: calc(100vh - 220px);
+        overflow: auto;
+        z-index: 6;
+        transform: translateX(calc(100% + 20px));
+        transition: transform .18s ease;
+      }
+
+      aside.open { transform: translateX(0); }
+
+      .mobile-toggle {
+        display: inline-flex;
+        position: fixed;
+        right: 12px;
+        top: 78px;
+        z-index: 7;
+        min-width: 44px;
+        min-height: 44px;
+        border-radius: 8px;
+        background: #f6c84c;
+        color: #21160c;
+        align-items: center;
+        justify-content: center;
+        font-weight: 900;
+      }
+
+      .tile { gap: 4px; }
+      .zone { padding: 8px; }
+      .grid { gap: 5px; }
+      .bottom-sheet { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <button class="mobile-toggle" id="panelToggle" aria-label="패널 열기">☰</button>
+  <div class="app">
+    <header>
+      <div>
+        <h1>배뽑디</h1>
+        <div class="small">배치 & 뽑기 디펜스</div>
+      </div>
+      <div class="topline">
+        <div class="pill" id="roundPill">R 1 / 30</div>
+        <div class="pill" id="attrPill">속성: 무</div>
+        <div class="resource" id="silverCoin">🥈 5</div>
+        <div class="resource" id="goldCoin">🪙 0</div>
+        <div class="resource" id="diamondCoin">💎 0</div>
+        <div class="resource" id="bossCoin">👑 0</div>
+        <button class="btn" id="speedBtn" aria-label="배속">⏩ 1x</button>
+      </div>
+    </header>
+
+    <div class="banner" id="bossPreview">10R / 20R / 30R 보스 속성은 5라운드에 공개됩니다.</div>
+
+    <main>
+      <section class="zone">
+        <div class="zone-head">
+          <span>🌀 잡몹 라인</span>
+          <span id="mobStatus">0 / 100</span>
+        </div>
+        <div class="grid" id="mobGrid"></div>
+      </section>
+
+      <section class="zone">
+        <div class="zone-head">
+          <span>⚡ 보스 라인</span>
+          <span id="bossStatus">대기 중</span>
+        </div>
+        <div class="grid" id="bossGrid"></div>
+      </section>
+
+      <section class="zone">
+        <div class="zone-head">
+          <span>📦 안전 대기석</span>
+          <span id="benchStatus">0 / 10</span>
+        </div>
+        <div class="grid" id="benchGrid"></div>
+      </section>
+    </main>
+
+    <aside id="sidePanel">
+      <section class="panel">
+        <h2>뽑기 & 조작</h2>
+        <div class="panel-body">
+          <div class="actions">
+            <button class="btn primary" id="drawBtn">🎰 1뽑</button>
+            <button class="btn good" id="mergeBtn">🔗 3합성</button>
+            <button class="btn warn" id="sellBtn">💰 판매</button>
+            <button class="btn" id="newBtn">↻ 재시작</button>
+          </div>
+          <div class="small">유닛 선택 후 빈 칸을 터치하면 즉시 이동합니다. 안전 대기석은 공격하지 않습니다.</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>원소 업그레이드</h2>
+        <div class="panel-body" id="upgradeBox"></div>
+      </section>
+
+      <section class="panel">
+        <h2>코인 쪼개기</h2>
+        <div class="panel-body">
+          <div class="exchange-row"><span>👑 보스</span><span>→ 💎💎</span><button class="btn" id="bossSplit">쪼개기</button></div>
+          <div class="exchange-row"><span>💎 다이아</span><span>→ 🪙🪙</span><button class="btn" id="diamondSplit">쪼개기</button></div>
+          <div class="exchange-row"><span>🪙 골드</span><span>→ 🥈🥈🥈</span><button class="btn" id="goldSplit">쪼개기</button></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>실시간 DPS</h2>
+        <div class="panel-body">
+          <div class="bar-list" id="dpsBars"></div>
+        </div>
+      </section>
+    </aside>
+  </div>
+
+  <div class="bottom-sheet">
+    <div id="selectionInfo">유닛을 선택하면 능력치와 💀 누적 킬수가 표시됩니다.</div>
+    <div class="small" id="bestInfo">최고 기록 R1</div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const tiers = [
+      { key: "iron", name: "아이언", mark: "I", value: 1, dmg: 6 },
+      { key: "bronze", name: "브론즈", mark: "B", value: 2, dmg: 16 },
+      { key: "silver", name: "실버", mark: "S", value: 3, dmg: 42 },
+      { key: "gold", name: "골드", mark: "G", value: 4, dmg: 105 },
+      { key: "diamond", name: "다이아", mark: "D", value: 5, dmg: 240, splash: true },
+      { key: "legend", name: "전설", mark: "L", value: 6, dmg: 620, splash: true }
+    ];
+
+    const elements = [
+      { key: "fire", name: "불", icon: "🔥", beats: "grass" },
+      { key: "water", name: "물", icon: "💧", beats: "fire" },
+      { key: "grass", name: "풀", icon: "🌿", beats: "water" }
+    ];
+
+    const zones = {
+      mob: { size: 20, grid: "mobGrid", cls: "mob" },
+      boss: { size: 10, grid: "bossGrid", cls: "boss" },
+      bench: { size: 10, grid: "benchGrid", cls: "safe" }
+    };
+
+    const affixes = [
+      { key: "hp", label: "❤️ 체력 증가", hp: 1.85, speed: 1, count: 1 },
+      { key: "fast", label: "⚡ 신속", hp: 1, speed: 1.8, count: 1 },
+      { key: "immune", label: "🛡️ 상태이상 면역", hp: 1.2, speed: 1.1, count: 1, immune: true },
+      { key: "swarm", label: "👥 대량 발생", hp: .58, speed: 1.1, count: 2.7 },
+      { key: "elite", label: "👹 소수 정예", hp: 4.4, speed: .72, count: .32 }
+    ];
+
+    const state = {
+      units: [],
+      selected: null,
+      round: 1,
+      time: 0,
+      speed: 1,
+      gameOver: false,
+      won: false,
+      mobs: { count: 0, hp: 0, maxHp: 0, element: null, affix: null, spawnDebt: 0 },
+      boss: null,
+      coins: { silver: 5, gold: 0, diamond: 0, boss: 0 },
+      upgrades: { fire: 0, water: 0, grass: 0 },
+      dps: {},
+      bossPreview: [],
+      best: Number(localStorage.getItem("baebbopdiBestRound") || 1),
+      nextId: 1,
+      lastTick: performance.now()
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    function toast(message) {
+      const node = $("toast");
+      node.textContent = message;
+      node.classList.add("show");
+      clearTimeout(toast.timer);
+      toast.timer = setTimeout(() => node.classList.remove("show"), 1600);
+    }
+
+    function randomElement() {
+      return elements[Math.floor(Math.random() * elements.length)];
+    }
+
+    function roundElement() {
+      const r = Math.random();
+      if (r < .4) return null;
+      return elements[Math.floor((r - .4) / .2)] || elements[2];
+    }
+
+    function tierByKey(key) {
+      return tiers.find((tier) => tier.key === key);
+    }
+
+    function elementByKey(key) {
+      return elements.find((element) => element.key === key);
+    }
+
+    function unitAt(zone, index) {
+      return state.units.find((unit) => unit.zone === zone && unit.index === index);
+    }
+
+    function emptyIndex(zone) {
+      for (let i = 0; i < zones[zone].size; i++) {
+        if (!unitAt(zone, i)) return i;
+      }
+      return -1;
+    }
+
+    function buildGrids() {
+      Object.entries(zones).forEach(([zone, info]) => {
+        const root = $(info.grid);
+        root.innerHTML = "";
+        root.style.gridTemplateRows = `repeat(${Math.ceil(info.size / 5)}, minmax(0, 1fr))`;
+        for (let i = 0; i < info.size; i++) {
+          const tile = document.createElement("button");
+          tile.className = `tile ${info.cls}`;
+          tile.dataset.zone = zone;
+          tile.dataset.index = i;
+          tile.setAttribute("aria-label", `${zone}-${i}`);
+          tile.addEventListener("click", () => onTile(zone, i));
+          root.appendChild(tile);
+        }
+      });
+    }
+
+    function generateBossPreview() {
+      state.bossPreview = [...elements].sort(() => Math.random() - .5).map((element, idx) => ({
+        round: [10, 20, 30][idx],
+        element: element.key
+      }));
+    }
+
+    function resetGame() {
+      Object.assign(state, {
+        units: [],
+        selected: null,
+        round: 1,
+        time: 0,
+        speed: 1,
+        gameOver: false,
+        won: false,
+        mobs: { count: 0, hp: 0, maxHp: 0, element: null, affix: null, spawnDebt: 0 },
+        boss: null,
+        coins: { silver: 5, gold: 0, diamond: 0, boss: 0 },
+        upgrades: { fire: 0, water: 0, grass: 0 },
+        dps: {},
+        nextId: 1,
+        lastTick: performance.now()
+      });
+      generateBossPreview();
+      startRound(1, true);
+      render();
+    }
+
+    function startRound(round, initial = false) {
+      state.round = round;
+      state.time = 0;
+      if (round > state.best) {
+        state.best = round;
+        localStorage.setItem("baebbopdiBestRound", round);
+      }
+      if (round > state.best) state.speed = 1;
+      const isBossRound = [10, 20, 30].includes(round);
+      const affix = !isBossRound && Math.random() < .13 ? affixes[Math.floor(Math.random() * affixes.length)] : null;
+      const attr = roundElement();
+      state.mobs = {
+        count: 0,
+        hp: 0,
+        maxHp: Math.round((30 + round * 15) * (affix?.hp || 1)),
+        element: attr?.key || null,
+        affix,
+        spawnDebt: 0
+      };
+      if (round === 5) revealBossPreview();
+      if ([10, 20, 30].includes(round)) spawnBoss(round);
+      if (!initial) {
+        state.coins.silver += affix ? 3 : 2;
+        toast(`${round}라운드 시작${affix ? ` · ${affix.label}` : ""}`);
+      }
+    }
+
+    function revealBossPreview() {
+      const text = state.bossPreview.map((boss) => {
+        const element = elementByKey(boss.element);
+        return `${boss.round}R ${element.icon}${element.name}`;
+      }).join("  /  ");
+      $("bossPreview").textContent = `보스 속성 예고: ${text}`;
+    }
+
+    function spawnBoss(round) {
+      const preview = state.bossPreview.find((boss) => boss.round === round);
+      const hpBase = round === 10 ? 1800 : round === 20 ? 7600 : 24000;
+      state.boss = {
+        round,
+        hp: hpBase,
+        maxHp: hpBase,
+        element: preview?.element || randomElement().key,
+        position: 0,
+        timer: 0,
+        deadline: round === 10 ? 6 : round === 20 ? 6 : 1.25,
+        finalSummon: 0
+      };
+    }
+
+    function drawUnit(tierKey = "iron") {
+      if (state.gameOver) return;
+      if (tierKey === "iron" && state.coins.silver < 1) return toast("실버코인이 부족합니다.");
+      const index = emptyIndex("bench");
+      if (index < 0) return toast("안전 대기석이 가득 찼습니다.");
+      if (tierKey === "iron") state.coins.silver -= 1;
+      const tier = tierByKey(tierKey);
+      const element = randomElement();
+      const roleRoll = Math.random();
+      state.units.push({
+        id: state.nextId++,
+        zone: "bench",
+        index,
+        tier: tier.key,
+        element: element.key,
+        kills: 0,
+        role: roleRoll > .88 ? "stun" : roleRoll > .74 ? "slow" : "dps",
+        lastDps: 0
+      });
+      render();
+    }
+
+    function mergeSelectedTier() {
+      if (state.gameOver) return;
+      if (!state.selected) return toast("합성할 유닛을 하나 선택하세요.");
+      const base = state.units.find((unit) => unit.id === state.selected);
+      if (!base) return;
+      const tierIndex = tiers.findIndex((tier) => tier.key === base.tier);
+      if (tierIndex >= tiers.length - 1) return toast("전설은 더 합성할 수 없습니다.");
+      const candidates = state.units.filter((unit) => unit.tier === base.tier && unit.zone === "bench");
+      if (candidates.length < 3) return toast("같은 등급 3기가 안전 대기석에 필요합니다.");
+      const used = candidates.slice(0, 3);
+      state.units = state.units.filter((unit) => !used.some((target) => target.id === unit.id));
+      state.units.push({
+        id: state.nextId++,
+        zone: "bench",
+        index: used[0].index,
+        tier: tiers[tierIndex + 1].key,
+        element: randomElement().key,
+        kills: used.reduce((sum, unit) => sum + unit.kills, 0),
+        role: Math.random() > .82 ? "slow" : "dps",
+        lastDps: 0
+      });
+      state.selected = null;
+      toast(`${tiers[tierIndex + 1].name} 합성 완료`);
+      render();
+    }
+
+    function sellSelected() {
+      const unit = state.units.find((item) => item.id === state.selected);
+      if (!unit) return toast("판매할 유닛을 선택하세요.");
+      const tier = tierByKey(unit.tier);
+      if (tier.key === "gold") state.coins.gold += 1;
+      if (tier.key === "diamond") state.coins.diamond += 1;
+      if (tier.key === "legend") state.coins.diamond += 2;
+      if (tier.value <= 3) state.coins.silver += tier.value;
+      state.units = state.units.filter((item) => item.id !== unit.id);
+      state.selected = null;
+      render();
+    }
+
+    function splitCoin(type) {
+      if (state.coins[type] < 1) return toast("쪼갤 코인이 없습니다.");
+      state.coins[type] -= 1;
+      if (type === "boss") state.coins.diamond += 2;
+      if (type === "diamond") state.coins.gold += 2;
+      if (type === "gold") state.coins.silver += 3;
+      render();
+    }
+
+    function upgradeCost(level) {
+      return Math.max(1, Math.floor(level / 3) + 1);
+    }
+
+    function upgradeElement(key) {
+      const cost = upgradeCost(state.upgrades[key]);
+      if (state.coins.silver < cost) return toast("실버코인이 부족합니다.");
+      state.coins.silver -= cost;
+      state.upgrades[key] += 1;
+      render();
+    }
+
+    function onTile(zone, index) {
+      if (state.gameOver) return;
+      const unit = unitAt(zone, index);
+      if (unit) {
+        state.selected = unit.id;
+        render();
+        return;
+      }
+      if (!state.selected) return;
+      const selected = state.units.find((item) => item.id === state.selected);
+      if (!selected) return;
+      selected.zone = zone;
+      selected.index = index;
+      render();
+    }
+
+    function relationship(unitElement, targetElement) {
+      if (!targetElement) return 1;
+      const unit = elementByKey(unitElement);
+      if (unit.beats === targetElement) return 1.5;
+      const target = elementByKey(targetElement);
+      if (target.beats === unitElement) return .75;
+      return 1;
+    }
+
+    function unitDamage(unit, targetElement) {
+      const tier = tierByKey(unit.tier);
+      const upgrade = state.upgrades[unit.element] * .12;
+      const roleMod = unit.role === "dps" ? 1 : unit.role === "slow" ? .62 : .48;
+      const splash = tier.splash ? 1.35 : 1;
+      return tier.dmg * (1 + upgrade) * relationship(unit.element, targetElement) * roleMod * splash;
+    }
+
+    function zoneDps(zone, targetElement) {
+      return state.units
+        .filter((unit) => unit.zone === zone)
+        .reduce((sum, unit) => sum + unitDamage(unit, targetElement), 0);
+    }
+
+    function ccFactor() {
+      if (!state.boss) return 1;
+      const bossUnits = state.units.filter((unit) => unit.zone === "boss");
+      const slow = bossUnits.filter((unit) => unit.role === "slow").length;
+      const stun = bossUnits.filter((unit) => unit.role === "stun").length;
+      return Math.max(.38, 1 - slow * .13 - stun * .2);
+    }
+
+    function distributeKills(zone, kills) {
+      const attackers = state.units.filter((unit) => unit.zone === zone);
+      if (!attackers.length) return;
+      for (let i = 0; i < kills; i++) {
+        attackers[i % attackers.length].kills += 1;
+      }
+    }
+
+    function tick(now) {
+      const dtRaw = Math.min(.08, (now - state.lastTick) / 1000);
+      state.lastTick = now;
+      if (!state.gameOver) update(dtRaw * state.speed);
+      render();
+      requestAnimationFrame(tick);
+    }
+
+    function update(dt) {
+      state.time += dt;
+      const roundLength = state.round === 30 ? 75 : 28;
+      const affix = state.mobs.affix;
+      const spawnRate = (1.05 + state.round * .055) * (affix?.count || 1) * (affix?.speed || 1);
+      if (![10, 20, 30].includes(state.round) || state.round === 30) {
+        state.mobs.spawnDebt += spawnRate * dt;
+        const toSpawn = Math.floor(state.mobs.spawnDebt);
+        if (toSpawn > 0) {
+          state.mobs.spawnDebt -= toSpawn;
+          state.mobs.count += toSpawn;
+          state.mobs.hp += toSpawn * state.mobs.maxHp;
+        }
+      }
+      if (state.round === 30 && state.boss) {
+        state.boss.finalSummon += dt;
+        if (state.boss.finalSummon > 7) {
+          state.boss.finalSummon = 0;
+          state.mobs.count += 18;
+          state.mobs.hp += 18 * state.mobs.maxHp;
+          toast("최종 보스가 잡몹을 소환했습니다.");
+        }
+      }
+
+      const mobDps = zoneDps("mob", state.mobs.element);
+      const mobKilled = Math.min(state.mobs.count, Math.floor((Math.min(state.mobs.hp, mobDps * dt) / Math.max(1, state.mobs.maxHp))));
+      state.mobs.hp = Math.max(0, state.mobs.hp - mobDps * dt);
+      state.mobs.count = Math.ceil(state.mobs.hp / Math.max(1, state.mobs.maxHp));
+      if (mobKilled > 0) distributeKills("mob", mobKilled);
+
+      if (state.boss) {
+        const shield = state.round === 30 && state.mobs.count > 0 ? .2 : 1;
+        const bossDps = zoneDps("boss", state.boss.element) * shield;
+        state.boss.hp = Math.max(0, state.boss.hp - bossDps * dt);
+        if (state.boss.hp <= 0) {
+          distributeKills("boss", 1);
+          if (state.boss.round < 30) state.coins.boss += 1;
+          else win();
+          state.boss = null;
+          toast("보스 처치 성공");
+        } else {
+          state.boss.timer += dt * ccFactor();
+          state.boss.position = Math.min(9, Math.floor((state.boss.timer / (state.boss.deadline * 28)) * 10));
+          if (state.boss.position >= 9 && state.boss.round !== 30) lose("보스가 데드라인에 도달했습니다.");
+        }
+      }
+
+      if (state.mobs.count > 100) lose("잡몹 100마리 제한을 초과했습니다.");
+      if (state.round === 30 && state.time >= roundLength && state.boss) lose("최종 보스 타이머가 종료되었습니다.");
+      if (state.time >= roundLength && !state.boss) {
+        if (state.round >= 30) win();
+        else startRound(state.round + 1);
+      }
+      if ((state.round === 20 || state.round === 30) && state.boss?.round === 10) lose("10라운드 보스를 제때 처치하지 못했습니다.");
+      if (state.round === 30 && state.boss?.round === 20) lose("20라운드 보스를 제때 처치하지 못했습니다.");
+    }
+
+    function lose(message) {
+      state.gameOver = true;
+      state.speed = 1;
+      toast(`패배: ${message}`);
+    }
+
+    function win() {
+      state.won = true;
+      state.gameOver = true;
+      state.speed = 1;
+      toast("30라운드 최종 보스 처치 성공");
+    }
+
+    function renderTile(tile, unit, zone, index) {
+      tile.className = `tile ${zones[zone].cls}`;
+      if (state.selected && !unit) tile.classList.add("targetable");
+      if (unit?.id === state.selected) tile.classList.add("selected");
+      if (zone === "boss" && state.boss && state.boss.position === index) tile.classList.add("enemy");
+      if (zone === "boss" && [0, 1, 3, 4, 5, 7, 8, 9].includes(index)) tile.classList.add("path");
+      tile.innerHTML = "";
+      if (!unit) return;
+      const tier = tierByKey(unit.tier);
+      const element = elementByKey(unit.element);
+      const node = document.createElement("div");
+      node.className = `unit tier-${tier.key}`;
+      node.innerHTML = `<span>${tier.mark}</span><span class="badge">${element.icon}</span><span class="rank-dot"></span>`;
+      tile.appendChild(node);
+    }
+
+    function render() {
+      Object.keys(zones).forEach((zone) => {
+        [...$(zones[zone].grid).children].forEach((tile, index) => {
+          renderTile(tile, unitAt(zone, index), zone, index);
+        });
+      });
+
+      $("roundPill").textContent = `R ${state.round} / 30`;
+      const attr = state.mobs.element ? elementByKey(state.mobs.element) : null;
+      $("attrPill").textContent = `속성: ${attr ? `${attr.icon} ${attr.name}` : "무"}`;
+      $("silverCoin").textContent = `🥈 ${state.coins.silver}`;
+      $("goldCoin").textContent = `🪙 ${state.coins.gold}`;
+      $("diamondCoin").textContent = `💎 ${state.coins.diamond}`;
+      $("bossCoin").textContent = `👑 ${state.coins.boss}`;
+      $("mobStatus").textContent = `${state.mobs.count} / 100${state.mobs.affix ? ` · ${state.mobs.affix.label}` : ""}`;
+      $("benchStatus").textContent = `${state.units.filter((unit) => unit.zone === "bench").length} / 10`;
+      $("bossStatus").textContent = state.boss
+        ? `${elementByKey(state.boss.element).icon} HP ${Math.ceil(state.boss.hp)} / ${state.boss.maxHp}`
+        : "대기 중";
+      $("bestInfo").textContent = `최고 기록 R${state.best}${state.gameOver ? state.won ? " · 승리" : " · 패배" : ""}`;
+      $("speedBtn").textContent = `⏩ ${state.speed}x`;
+      $("speedBtn").disabled = state.round >= state.best;
+
+      if (state.round < 5) $("bossPreview").textContent = "10R / 20R / 30R 보스 속성은 5라운드에 공개됩니다.";
+      else revealBossPreview();
+
+      renderUpgrades();
+      renderDps();
+      renderSelection();
+    }
+
+    function renderUpgrades() {
+      $("upgradeBox").innerHTML = elements.map((element) => {
+        const level = state.upgrades[element.key];
+        const cost = upgradeCost(level);
+        return `<div class="upgrade-row">
+          <span>${element.icon} ${element.name} Lv.${level}</span>
+          <span class="small">비용 ${cost}</span>
+          <button class="btn" data-upgrade="${element.key}">강화</button>
+        </div>`;
+      }).join("");
+      document.querySelectorAll("[data-upgrade]").forEach((button) => {
+        button.onclick = () => upgradeElement(button.dataset.upgrade);
+      });
+    }
+
+    function renderDps() {
+      const rows = state.units
+        .filter((unit) => unit.zone !== "bench")
+        .map((unit) => {
+          const target = unit.zone === "mob" ? state.mobs.element : state.boss?.element;
+          const dps = Math.round(unitDamage(unit, target));
+          unit.lastDps = dps;
+          return { unit, dps };
+        })
+        .sort((a, b) => b.dps - a.dps)
+        .slice(0, 8);
+      const max = Math.max(1, ...rows.map((row) => row.dps));
+      $("dpsBars").innerHTML = rows.length ? rows.map(({ unit, dps }) => {
+        const tier = tierByKey(unit.tier);
+        const element = elementByKey(unit.element);
+        return `<div class="bar">
+          <span>${tier.mark} ${element.icon}</span>
+          <span class="track"><span class="fill" style="width:${Math.max(4, dps / max * 100)}%"></span></span>
+          <span>${dps}</span>
+        </div>`;
+      }).join("") : `<div class="small">필드에 유닛을 배치하면 DPS가 표시됩니다.</div>`;
+    }
+
+    function renderSelection() {
+      const unit = state.units.find((item) => item.id === state.selected);
+      if (!unit) {
+        $("selectionInfo").textContent = "유닛을 선택하면 능력치와 💀 누적 킬수가 표시됩니다.";
+        return;
+      }
+      const tier = tierByKey(unit.tier);
+      const element = elementByKey(unit.element);
+      const role = unit.role === "slow" ? "슬로우" : unit.role === "stun" ? "스턴" : "딜러";
+      $("selectionInfo").textContent = `${tier.name} ${element.icon}${element.name} · ${role} · DPS ${Math.round(unit.lastDps || unitDamage(unit, state.mobs.element))} · 💀 ${unit.kills}`;
+    }
+
+    $("drawBtn").onclick = () => drawUnit();
+    $("mergeBtn").onclick = mergeSelectedTier;
+    $("sellBtn").onclick = sellSelected;
+    $("newBtn").onclick = resetGame;
+    $("bossSplit").onclick = () => splitCoin("boss");
+    $("diamondSplit").onclick = () => splitCoin("diamond");
+    $("goldSplit").onclick = () => splitCoin("gold");
+    $("speedBtn").onclick = () => {
+      if (state.round < state.best) state.speed = state.speed === 1 ? 2 : 1;
+      render();
+    };
+    $("panelToggle").onclick = () => $("sidePanel").classList.toggle("open");
+
+    buildGrids();
+    resetGame();
+    requestAnimationFrame(tick);
+  </script>
+</body>
+</html>
