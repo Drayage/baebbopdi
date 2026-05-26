@@ -9,15 +9,13 @@
     :root {
       --bg: #10131a;
       --panel: #181e29;
-      --panel2: #202838;
       --line: #334054;
       --ink: #f7f9ff;
       --muted: #aab5c7;
-      --coin: #ffd460;
       --red: #ff5c70;
       --blue: #62b9ff;
       --green: #67df8d;
-      --purple: #bb7cff;
+      --gold: #ffd460;
       --shadow: 0 20px 70px rgba(0, 0, 0, .34);
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
@@ -318,6 +316,34 @@
       text-align: center;
     }
 
+    .dps-list {
+      display: grid;
+      gap: 6px;
+    }
+
+    .dps-row {
+      display: grid;
+      grid-template-columns: 72px 1fr 44px;
+      gap: 7px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .dps-track {
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, .32);
+      overflow: hidden;
+    }
+
+    .dps-fill {
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #ff5c70, #ffd460, #67df8d, #62b9ff);
+    }
+
     .small {
       color: var(--muted);
       font-size: 12px;
@@ -379,18 +405,19 @@
     <header>
       <div>
         <h1>배뽑디</h1>
-        <div class="subtitle">왼쪽 잡몹 순환 / 오른쪽 상자·보스 순환 2Way 디펜스</div>
+        <div class="subtitle">왼쪽 잡몹 순환 / 오른쪽 상자·보스 지그재그 2Way 디펜스</div>
       </div>
       <div class="hud">
         <div class="pill" id="roundPill">R 1</div>
-        <div class="pill" id="coinPill">🥈 5 · 🪙 0 · 💎 0 · 👑 0</div>
+        <div class="pill" id="attrPill">속성 무</div>
+        <div class="pill" id="coinPill">🪨 0 · I 0 · B 0 · 🥈 5</div>
         <div class="pill" id="lifePill">❤️ 50</div>
         <button class="btn" id="speedBtn">⏩ 1x</button>
         <button class="btn red" id="restartBtn">↻</button>
       </div>
     </header>
 
-    <div class="status" id="statusText">10라운드 전까지 오른쪽 보물상자 하나를 부숴 코인을 벌고, 왼쪽 잡몹 압박을 버티세요.</div>
+    <div class="status" id="statusText">라운드 전체 속성과 어픽스가 정해진 뒤 한 종류의 웨이브가 몰려옵니다.</div>
 
     <section class="battlefield">
       <div class="lane" id="mobLane">
@@ -425,12 +452,17 @@
       <div class="panel">
         <h2 class="panel-title">원소 업그레이드</h2>
         <div class="upgrade-grid" id="upgrades"></div>
-        <h2 class="panel-title" style="margin-top:12px;">코인 쪼개기</h2>
+        <h2 class="panel-title" style="margin-top:12px;">코인 교환</h2>
         <div class="upgrade-grid">
+          <button class="upgrade" id="splitStone"><strong>🪨🪨 → I</strong><span class="small">돌 2개 조합</span></button>
+          <button class="upgrade" id="splitIron"><strong>I I → B</strong><span class="small">아이언코인 2개</span></button>
+          <button class="upgrade" id="splitBronze"><strong>B B → 🥈</strong><span class="small">브론즈코인 2개</span></button>
           <button class="upgrade" id="splitBoss"><strong>👑 → 💎💎</strong><span class="small">보스코인 분해</span></button>
           <button class="upgrade" id="splitDiamond"><strong>💎 → 🪙🪙</strong><span class="small">다이아코인 분해</span></button>
-          <button class="upgrade" id="splitGold"><strong>🪙 → 🥈🥈🥈</strong><span class="small">골드코인 분해</span></button>
+          <button class="upgrade" id="splitGold"><strong>🪙 → 🥈🥈</strong><span class="small">골드코인 분해</span></button>
         </div>
+        <h2 class="panel-title" style="margin-top:12px;">실시간 DPS</h2>
+        <div class="dps-list" id="dpsList"></div>
       </div>
     </section>
   </div>
@@ -438,6 +470,9 @@
   <div class="toast" id="toast"></div>
 
   <script>
+    const ROUND_SECONDS = 24;
+    const bossRounds = [10, 20, 30];
+    const elementCycle = ["fire", "grass", "water"];
     const tiers = [
       { key: "iron", label: "I", name: "아이언", dmg: 12, rate: .92 },
       { key: "bronze", label: "B", name: "브론즈", dmg: 26, rate: .8 },
@@ -448,14 +483,22 @@
     ];
 
     const elems = [
-      { key: "fire", icon: "🔥", name: "불", color: "#ff5c70" },
-      { key: "water", icon: "💧", name: "물", color: "#62b9ff" },
-      { key: "grass", icon: "🌿", name: "풀", color: "#67df8d" }
+      { key: "fire", icon: "🔥", name: "불", color: "#ff5c70", beats: "grass" },
+      { key: "water", icon: "💧", name: "물", color: "#62b9ff", beats: "fire" },
+      { key: "grass", icon: "🌿", name: "풀", color: "#67df8d", beats: "water" }
+    ];
+
+    const affixes = [
+      { key: "hp", label: "❤️ 체력 증가", hp: 1.9, speed: 1, count: 1 },
+      { key: "fast", label: "⚡ 신속", hp: 1, speed: 1.7, count: 1 },
+      { key: "immune", label: "🛡️ 상태이상 면역", hp: 1.15, speed: 1.05, count: 1, immune: true },
+      { key: "swarm", label: "👥 대량 발생", hp: .55, speed: 1.05, count: 2.7 },
+      { key: "elite", label: "👹 소수 정예", hp: 4.6, speed: .75, count: .35 }
     ];
 
     const state = {
       round: 1,
-      coins: { silver: 5, gold: 0, diamond: 0, boss: 0 },
+      coins: { stone: 0, iron: 0, bronze: 0, silver: 5, gold: 0, diamond: 0, boss: 0 },
       lives: 50,
       speed: 1,
       time: 0,
@@ -469,9 +512,12 @@
       shots: [],
       effects: [],
       chest: null,
-      chestClaimed: false,
       boss: null,
-      bossDefeated: false,
+      bossPreview: [],
+      roundElements: [],
+      roundElement: null,
+      affix: null,
+      wave: null,
       upgrades: { fire: 0, water: 0, grass: 0 },
       spawnTimer: 0,
       last: performance.now(),
@@ -496,6 +542,18 @@
       toast.timer = setTimeout(() => node.classList.remove("show"), 1300);
     }
 
+    function shuffle(array) {
+      return array.map((value) => ({ value, sort: Math.random() })).sort((a, b) => a.sort - b.sort).map((item) => item.value);
+    }
+
+    function buildRoundElements() {
+      return shuffle([...Array(12).fill(null), ...Array(6).fill("fire"), ...Array(6).fill("water"), ...Array(6).fill("grass")]);
+    }
+
+    function buildBossPreview() {
+      return shuffle(["fire", "water", "grass"]).map((element, index) => ({ round: bossRounds[index], element }));
+    }
+
     function fitCanvas(canvas) {
       const box = canvas.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;
@@ -508,7 +566,7 @@
       return { dpr };
     }
 
-    function pathPoint(canvas, t) {
+    function boxPath(canvas, t) {
       const { width: w, height: h } = canvas;
       const pad = Math.min(w, h) * .09;
       const left = pad, right = w - pad, top = pad, bottom = h - pad;
@@ -519,11 +577,33 @@
       return { x: left, y: bottom - (bottom - top) * ((p - .75) / .25) };
     }
 
+    function zigPath(canvas, t) {
+      const p = Math.max(0, Math.min(.999, t));
+      const pad = Math.min(canvas.width, canvas.height) * .09;
+      const left = pad, right = canvas.width - pad, top = pad, bottom = canvas.height - pad;
+      const rows = 9;
+      const segment = p * rows;
+      const row = Math.floor(segment);
+      const f = segment - row;
+      const y = top + (bottom - top) * (row / rows + f / rows);
+      const leftToRight = row % 2 === 0;
+      const x = leftToRight ? left + (right - left) * f : right - (right - left) * f;
+      return { x, y };
+    }
+
     function slotPos(lane, slot) {
       const canvas = canvases[lane];
       const layout = lane === "mob" ? mobSlotLayout : bossSlotLayout;
       const [x, y] = layout[slot];
       return { x: canvas.width * x, y: canvas.height * y };
+    }
+
+    function tier(key) {
+      return tiers.find((item) => item.key === key);
+    }
+
+    function elem(key) {
+      return elems.find((item) => item.key === key);
     }
 
     function randomElem() {
@@ -540,14 +620,6 @@
       return tiers[0];
     }
 
-    function tier(key) {
-      return tiers.find((item) => item.key === key);
-    }
-
-    function elem(key) {
-      return elems.find((item) => item.key === key);
-    }
-
     function emptyBench() {
       return state.units.filter((unit) => unit.lane === "bench").length < 10;
     }
@@ -560,19 +632,33 @@
       return state.units.find((unit) => unit.id === state.selected);
     }
 
-    function damage(unit) {
-      return tier(unit.tier).dmg * (1 + state.upgrades[unit.elem] * .16);
+    function relation(attacker, defender) {
+      if (!defender) return 1;
+      const a = elem(attacker);
+      const d = elem(defender);
+      if (a.beats === defender) return 1.5;
+      if (d.beats === attacker) return .75;
+      return 1;
+    }
+
+    function baseDamage(unit, targetElement) {
+      return tier(unit.tier).dmg * (1 + state.upgrades[unit.elem] * .16) * relation(unit.elem, targetElement);
+    }
+
+    function effectiveDps(unit) {
+      const targetElement = unit.lane === "mob" ? state.roundElement : state.boss?.element || null;
+      return baseDamage(unit, targetElement) / tier(unit.tier).rate;
     }
 
     function coinText() {
       const c = state.coins;
-      return `🥈 ${c.silver} · 🪙 ${c.gold} · 💎 ${c.diamond} · 👑 ${c.boss}`;
+      return `🪨 ${c.stone} · I ${c.iron} · B ${c.bronze} · 🥈 ${c.silver} · 🪙 ${c.gold} · 💎 ${c.diamond} · 👑 ${c.boss}`;
     }
 
     function reset() {
       Object.assign(state, {
         round: 1,
-        coins: { silver: 5, gold: 0, diamond: 0, boss: 0 },
+        coins: { stone: 0, iron: 0, bronze: 0, silver: 5, gold: 0, diamond: 0, boss: 0 },
         lives: 50,
         speed: 1,
         time: 0,
@@ -586,25 +672,74 @@
         shots: [],
         effects: [],
         chest: makeChest(),
-        chestClaimed: false,
         boss: null,
-        bossDefeated: false,
+        bossPreview: buildBossPreview(),
+        roundElements: buildRoundElements(),
+        roundElement: null,
+        affix: null,
+        wave: null,
         upgrades: { fire: 0, water: 0, grass: 0 },
         spawnTimer: 0,
         last: performance.now(),
         dirty: true
       });
+      startRound(1, true);
       toast("새 게임 시작");
       renderStatic();
     }
 
-    function makeChest() {
-      return { hp: 650, maxHp: 650, t: .12, speed: .045, reward: 8, dead: false };
+    function currentBossElement(round) {
+      return state.bossPreview.find((item) => item.round === round)?.element || randomElem().key;
     }
 
-    function makeBoss() {
-      const hp = 4300 + state.round * 520;
-      return { hp, maxHp: hp, t: .08, speed: .04 + state.round * .001, elem: randomElem().key, dead: false };
+    function makeChest() {
+      return { hp: 16000, maxHp: 16000, t: 0, speed: 1 / (ROUND_SECONDS * 9), reward: 18, dead: false };
+    }
+
+    function makeBoss(round) {
+      const hp = round === 10 ? 16000 : round === 20 ? 42000 : 90000;
+      const deadlineRounds = round === 30 ? 1 : 6;
+      return {
+        round,
+        hp,
+        maxHp: hp,
+        t: 0,
+        speed: 1 / (ROUND_SECONDS * deadlineRounds),
+        element: currentBossElement(round),
+        dead: false,
+        finalTimer: round === 30 ? 75 : null,
+        summonTimer: 0
+      };
+    }
+
+    function startRound(round, initial = false) {
+      state.round = round;
+      state.roundTime = 0;
+      state.spawnTimer = 0;
+      state.roundElement = state.roundElements[round - 1] || null;
+      state.affix = !bossRounds.includes(round) && Math.random() < .13 ? affixes[Math.floor(Math.random() * affixes.length)] : null;
+      const affix = state.affix || { hp: 1, speed: 1, count: 1 };
+      state.wave = {
+        remaining: Math.ceil((14 + round * 4) * affix.count),
+        hp: Math.round((70 + round * 25) * affix.hp),
+        speed: (.045 + round * .003) * affix.speed,
+        element: state.roundElement,
+        immune: !!state.affix?.immune
+      };
+      if (!initial) state.coins.silver += state.affix ? 3 : 2;
+      if (round === 10 || round === 20 || round === 30) {
+        if (state.boss && !state.boss.dead) {
+          lose(`${state.boss.round}라운드 보스를 제때 처치하지 못했습니다.`);
+          return;
+        }
+        state.chest = null;
+        state.boss = makeBoss(round);
+      }
+      if (round === 5) {
+        const text = state.bossPreview.map((boss) => `${boss.round}R ${elem(boss.element).icon}${elem(boss.element).name}`).join(" / ");
+        toast(`보스 예고: ${text}`);
+      }
+      state.dirty = true;
     }
 
     function drawUnit() {
@@ -613,6 +748,7 @@
       if (!emptyBench()) return toast("대기석이 가득 찼습니다.");
       const picked = rollTier();
       const element = randomElem();
+      const roleRoll = Math.random();
       state.coins.silver -= 1;
       state.units.push({
         id: state.nextId++,
@@ -620,6 +756,7 @@
         slot: null,
         tier: picked.key,
         elem: element.key,
+        role: roleRoll > .88 ? "stun" : roleRoll > .72 ? "slow" : "dps",
         cd: Math.random() * .4,
         kills: 0
       });
@@ -631,12 +768,13 @@
     }
 
     function sellReward(unit) {
-      const t = tier(unit.tier);
-      if (t.key === "legend") return { type: "diamond", amount: 2, label: "💎 2" };
-      if (t.key === "diamond") return { type: "diamond", amount: 1, label: "💎 1" };
-      if (t.key === "gold") return { type: "gold", amount: 1, label: "🪙 1" };
-      const amount = t.key === "silver" ? 3 : t.key === "bronze" ? 2 : 1;
-      return { type: "silver", amount, label: `🥈 ${amount}` };
+      const key = tier(unit.tier).key;
+      if (key === "gold") return { type: "silver", amount: 1, label: "🥈 1" };
+      if (key === "silver") return { type: "bronze", amount: 1, label: "B 1" };
+      if (key === "bronze") return { type: "iron", amount: 1, label: "I 1" };
+      if (key === "iron") return { type: "stone", amount: 1, label: "🪨 1" };
+      if (key === "diamond") return { type: "gold", amount: 1, label: "🪙 1" };
+      return { type: "diamond", amount: 1, label: "💎 1" };
     }
 
     function sellUnit(unit) {
@@ -657,12 +795,10 @@
       renderStatic();
     }
 
-    function splitCoin(type) {
-      if (state.coins[type] < 1) return toast("쪼갤 코인이 없습니다.");
-      state.coins[type] -= 1;
-      if (type === "boss") state.coins.diamond += 2;
-      if (type === "diamond") state.coins.gold += 2;
-      if (type === "gold") state.coins.silver += 3;
+    function convertCoin(from, to, fromAmount, toAmount) {
+      if (state.coins[from] < fromAmount) return toast("재료 코인이 부족합니다.");
+      state.coins[from] -= fromAmount;
+      state.coins[to] += toAmount;
       state.dirty = true;
       renderStatic();
     }
@@ -698,32 +834,33 @@
       renderStatic();
     }
 
-    function makeMob() {
-      const hp = 70 + state.round * 25;
+    function makeMob(force = {}) {
+      const hp = force.hp || state.wave.hp;
       return {
         id: state.nextId++,
         hp,
         maxHp: hp,
-        t: Math.random() * .08,
-        speed: .045 + state.round * .003 + Math.random() * .01,
-        elem: randomElem().key,
+        t: Math.random() * .04,
+        speed: force.speed || state.wave.speed,
+        elem: force.element === undefined ? state.wave.element : force.element,
+        immune: force.immune === undefined ? state.wave.immune : force.immune,
         size: 7 + Math.random() * 5
       };
     }
 
     function nextRound() {
-      state.round += 1;
-      state.roundTime = 0;
-      state.coins.silver += 2;
-      if (state.round === 10) {
-        state.chest = null;
-        if (!state.bossDefeated) state.boss = makeBoss();
-        toast("10라운드 보스 등장");
-      } else {
-        toast(`${state.round}라운드 · 보상 🥈 2`);
-      }
-      state.dirty = true;
+      if (state.round >= 30) return;
+      startRound(state.round + 1);
       renderStatic();
+    }
+
+    function bossCcFactor() {
+      if (!state.boss) return 1;
+      const supports = state.units.filter((unit) => unit.lane === "boss");
+      const slow = supports.filter((unit) => unit.role === "slow").length;
+      const stun = supports.filter((unit) => unit.role === "stun").length;
+      if (state.boss.round === 30) return 1;
+      return Math.max(.38, 1 - slow * .14 - stun * .22);
     }
 
     function update(dt) {
@@ -731,12 +868,17 @@
       state.time += dt;
       state.roundTime += dt;
 
-      const spawnEvery = Math.max(.24, .78 - state.round * .018);
-      state.spawnTimer += dt;
-      while (state.spawnTimer >= spawnEvery) {
-        state.spawnTimer -= spawnEvery;
-        const amount = state.round < 4 ? 1 : state.round < 8 ? 2 : 3;
-        for (let i = 0; i < amount; i++) state.mobs.push(makeMob());
+      if (state.wave?.remaining > 0) {
+        state.spawnTimer += dt;
+        const spawnEvery = Math.max(.12, .58 - state.round * .01);
+        while (state.spawnTimer >= spawnEvery && state.wave.remaining > 0) {
+          state.spawnTimer -= spawnEvery;
+          const batch = state.affix?.key === "elite" ? 1 : state.affix?.key === "swarm" ? 4 : state.round < 8 ? 1 : 2;
+          for (let i = 0; i < batch && state.wave.remaining > 0; i++) {
+            state.mobs.push(makeMob());
+            state.wave.remaining -= 1;
+          }
+        }
       }
 
       state.mobs.forEach((mob) => {
@@ -748,8 +890,29 @@
         }
       });
 
-      if (state.chest && !state.chest.dead) state.chest.t += state.chest.speed * dt;
-      if (state.boss && !state.boss.dead) state.boss.t += state.boss.speed * dt;
+      if (state.chest && !state.chest.dead) {
+        state.chest.t += state.chest.speed * dt;
+        if (state.chest.t >= 1) {
+          state.chest.dead = true;
+          toast("보물상자가 라인을 빠져나갔습니다.");
+          state.dirty = true;
+        }
+      }
+
+      if (state.boss && !state.boss.dead) {
+        state.boss.t += state.boss.speed * bossCcFactor() * dt;
+        if (state.boss.round === 30) {
+          state.boss.finalTimer -= dt;
+          state.boss.summonTimer += dt;
+          if (state.boss.summonTimer >= 7) {
+            state.boss.summonTimer = 0;
+            for (let i = 0; i < 18; i++) state.mobs.push(makeMob({ hp: 140 + state.round * 20, speed: .065, element: state.roundElement }));
+            toast("최종 보스가 잡몹을 소환했습니다.");
+          }
+          if (state.boss.finalTimer <= 0) lose("최종 보스 제한시간 종료");
+        }
+        if (state.boss.t >= 1) lose("보스가 데드라인에 도달했습니다.");
+      }
 
       state.units.filter((unit) => unit.lane !== "bench").forEach((unit) => {
         unit.cd -= dt;
@@ -759,8 +922,9 @@
         const from = slotPos(unit.lane, unit.slot);
         const to = targetPoint(unit.lane, target);
         unit.cd = tier(unit.tier).rate;
+        const dmg = baseDamage(unit, target.elem || target.element || null);
         if (unit.elem === "fire") {
-          hitTarget(unit, target, damage(unit), !!tier(unit.tier).splash);
+          hitTarget(unit, target, dmg, !!tier(unit.tier).splash);
           state.effects.push({ lane: unit.lane, x: to.x, y: to.y, color: "#ff304d", age: 0, kind: "fire" });
         } else {
           state.shots.push({
@@ -774,7 +938,7 @@
             target,
             unitId: unit.id,
             elem: unit.elem,
-            dmg: damage(unit),
+            dmg,
             splash: !!tier(unit.tier).splash,
             color: elem(unit.elem).color,
             life: 0
@@ -789,10 +953,9 @@
 
       if (state.mobs.length > 115) lose("잡몹이 화면을 장악했습니다.");
       if (state.lives <= 0) lose("라인이 무너졌습니다.");
-      if (state.roundTime > 24) nextRound();
+      if (state.roundTime > ROUND_SECONDS) nextRound();
       if (state.boss && state.boss.hp <= 0 && !state.boss.dead) {
         state.boss.dead = true;
-        state.bossDefeated = true;
         state.coins.boss += 1;
         toast("보스 처치 · 👑 1");
         state.dirty = true;
@@ -806,25 +969,26 @@
     }
 
     function targetPoint(lane, target) {
-      return pathPoint(canvases[lane], target.t);
+      return lane === "boss" ? zigPath(canvases.boss, target.t) : boxPath(canvases.mob, target.t);
     }
 
     function hitTarget(unit, target, dmg, splash) {
       if (!target || target.hp <= 0) return;
-      target.hp -= dmg;
+      let finalDamage = dmg;
+      if (target === state.boss && state.boss?.round === 30 && state.mobs.length > 0) finalDamage *= .2;
+      target.hp -= finalDamage;
       if (unit.lane === "mob" && splash) {
         state.mobs.slice(0, 5).forEach((mob) => {
-          if (mob !== target) mob.hp -= dmg * .35;
+          if (mob !== target) mob.hp -= finalDamage * .35;
         });
       }
       if (unit.lane === "mob" && target.hp <= 0) {
         unit.kills += 1;
-        if (Math.random() < .18) state.coins.silver += 1;
+        if (Math.random() < .18) state.coins.stone += 1;
         state.dirty = true;
       }
       if (target === state.chest && target.hp <= 0 && !target.dead) {
         target.dead = true;
-        state.chestClaimed = true;
         state.coins.silver += target.reward;
         toast(`보물상자 파괴 · 🥈 ${target.reward}`);
         state.dirty = true;
@@ -862,8 +1026,12 @@
       ctx.lineWidth = 5 * dpr;
       ctx.strokeStyle = lane === "mob" ? "rgba(98,185,255,.52)" : "rgba(255,212,96,.55)";
       ctx.setLineDash([12 * dpr, 12 * dpr]);
-      const pad = Math.min(canvas.width, canvas.height) * .09;
-      ctx.strokeRect(pad, pad, canvas.width - pad * 2, canvas.height - pad * 2);
+      if (lane === "mob") {
+        const pad = Math.min(canvas.width, canvas.height) * .09;
+        ctx.strokeRect(pad, pad, canvas.width - pad * 2, canvas.height - pad * 2);
+      } else {
+        drawZigPath(ctx, canvas);
+      }
       ctx.setLineDash([]);
       drawGridGlow(ctx, canvas, lane);
       if (lane === "mob") drawMobs(ctx, canvas);
@@ -871,6 +1039,16 @@
       drawShots(ctx, lane);
       drawEffects(ctx, lane);
       ctx.restore();
+    }
+
+    function drawZigPath(ctx, canvas) {
+      ctx.beginPath();
+      for (let i = 0; i <= 90; i++) {
+        const p = zigPath(canvas, i / 90);
+        if (i === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      }
+      ctx.stroke();
     }
 
     function drawGridGlow(ctx, canvas, lane) {
@@ -887,8 +1065,8 @@
 
     function drawMobs(ctx, canvas) {
       state.mobs.forEach((mob) => {
-        const p = pathPoint(canvas, mob.t);
-        const e = elem(mob.elem);
+        const p = boxPath(canvas, mob.t);
+        const e = mob.elem ? elem(mob.elem) : { color: "#d4d9e3" };
         const scale = window.devicePixelRatio || 1;
         ctx.beginPath();
         ctx.fillStyle = e.color;
@@ -908,9 +1086,9 @@
     function drawRightTarget(ctx, canvas) {
       const target = state.boss && !state.boss.dead ? state.boss : state.chest && !state.chest.dead ? state.chest : null;
       if (!target) return;
-      const p = pathPoint(canvas, target.t);
+      const p = zigPath(canvas, target.t);
       const isBoss = !!(state.boss && !state.boss.dead);
-      const color = isBoss ? "#ff5c70" : "#ffd460";
+      const color = isBoss ? elem(state.boss.element).color : "#ffd460";
       ctx.save();
       ctx.translate(p.x, p.y);
       ctx.rotate(state.time * 2);
@@ -989,28 +1167,31 @@
       renderSlots("boss", $("bossSlots"), 4);
       renderBench();
       renderUpgrades();
+      renderDps();
       $("app").classList.toggle("sell-mode", state.sellMode);
       $("sellBtn").classList.toggle("active", state.sellMode);
       state.dirty = false;
     }
 
     function updateHud() {
-      $("roundPill").textContent = `R ${state.round}`;
+      $("roundPill").textContent = `R ${state.round} / 30`;
+      const attr = state.roundElement ? `${elem(state.roundElement).icon} ${elem(state.roundElement).name}` : "무";
+      $("attrPill").textContent = `속성 ${attr}${state.affix ? ` · ${state.affix.label}` : ""}`;
       $("coinPill").textContent = coinText();
       $("lifePill").textContent = `❤️ ${state.lives}`;
       $("speedBtn").textContent = `⏩ ${state.speed}x`;
-      $("mobCount").textContent = `${state.mobs.length}마리`;
-      if (state.boss && !state.boss.dead) $("bossInfo").textContent = `보스 HP ${Math.ceil(state.boss.hp)} / ${state.boss.maxHp}`;
-      else if (state.chest && !state.chest.dead) $("bossInfo").textContent = `상자 HP ${Math.max(0, Math.ceil(state.chest.hp))} / ${state.chest.maxHp}`;
-      else if (state.round < 10) $("bossInfo").textContent = "상자 파괴 완료";
-      else $("bossInfo").textContent = state.bossDefeated ? "보스 처치 완료" : "보스 대기";
+      $("mobCount").textContent = `${state.mobs.length}마리 · 잔여 ${state.wave?.remaining || 0}`;
+      if (state.boss && !state.boss.dead) {
+        const shield = state.boss.round === 30 && state.mobs.length > 0 ? " · 실드 80%" : "";
+        $("bossInfo").textContent = `${state.boss.round}R 보스 ${elem(state.boss.element).icon} HP ${Math.ceil(state.boss.hp)} / ${state.boss.maxHp}${shield}`;
+      } else if (state.chest && !state.chest.dead) $("bossInfo").textContent = `상자 HP ${Math.max(0, Math.ceil(state.chest.hp))} / ${state.chest.maxHp}`;
+      else $("bossInfo").textContent = state.round < 10 ? "상자 없음" : "보스 없음";
+      const preview = state.round >= 5 ? ` · 보스예고 ${state.bossPreview.map((boss) => `${boss.round}R ${elem(boss.element).icon}`).join(" ")}` : "";
       $("statusText").textContent = state.gameOver
         ? "게임 종료. 재시작으로 다시 도전하세요."
         : state.sellMode
           ? "판매선택 중입니다. 유닛을 탭하면 계속 판매됩니다."
-          : state.round < 10
-            ? "오른쪽 보물상자는 10라운드 전 단 하나만 등장합니다. 부숴서 실버코인을 확보하세요."
-            : "10라운드부터 오른쪽에는 단 하나의 보스가 등장합니다.";
+          : `라운드 웨이브는 전체 속성 하나로 고정됩니다.${preview}`;
     }
 
     function renderSlots(lane, root, count) {
@@ -1029,11 +1210,12 @@
     function unitNode(unit) {
       const t = tier(unit.tier);
       const e = elem(unit.elem);
+      const role = unit.role === "slow" ? "S" : unit.role === "stun" ? "T" : "";
       const node = document.createElement("div");
       node.className = `unit tier-${unit.tier}`;
       node.dataset.elem = e.icon;
-      node.textContent = t.label;
-      node.title = `${t.name} ${e.name} · 킬 ${unit.kills}`;
+      node.textContent = `${t.label}${role}`;
+      node.title = `${t.name} ${e.name} · ${unit.role} · 킬 ${unit.kills}`;
       return node;
     }
 
@@ -1072,6 +1254,20 @@
       });
     }
 
+    function renderDps() {
+      const rows = state.units.filter((unit) => unit.lane !== "bench").map((unit) => ({
+        unit,
+        dps: Math.round(effectiveDps(unit))
+      })).sort((a, b) => b.dps - a.dps).slice(0, 8);
+      const max = Math.max(1, ...rows.map((row) => row.dps));
+      $("dpsList").innerHTML = rows.length ? rows.map(({ unit, dps }) => {
+        const t = tier(unit.tier);
+        const e = elem(unit.elem);
+        const width = Math.max(5, dps / max * 100);
+        return `<div class="dps-row"><span>${t.label} ${e.icon}</span><span class="dps-track"><span class="dps-fill" style="width:${width}%"></span></span><span>${dps}</span></div>`;
+      }).join("") : `<div class="small">필드에 유닛을 배치하면 DPS가 표시됩니다.</div>`;
+    }
+
     function loop(now) {
       const raw = Math.min(.05, (now - state.last) / 1000);
       state.last = now;
@@ -1079,6 +1275,7 @@
       drawLane("mob");
       drawLane("boss");
       updateHud();
+      if (state.dirty || Math.floor(state.time * 2) % 2 === 0) renderDps();
       if (state.dirty) renderStatic();
       requestAnimationFrame(loop);
     }
@@ -1090,9 +1287,12 @@
       state.speed = state.speed === 1 ? 2 : 1;
       renderStatic();
     };
-    $("splitBoss").onclick = () => splitCoin("boss");
-    $("splitDiamond").onclick = () => splitCoin("diamond");
-    $("splitGold").onclick = () => splitCoin("gold");
+    $("splitStone").onclick = () => convertCoin("stone", "iron", 2, 1);
+    $("splitIron").onclick = () => convertCoin("iron", "bronze", 2, 1);
+    $("splitBronze").onclick = () => convertCoin("bronze", "silver", 2, 1);
+    $("splitBoss").onclick = () => convertCoin("boss", "diamond", 1, 2);
+    $("splitDiamond").onclick = () => convertCoin("diamond", "gold", 1, 2);
+    $("splitGold").onclick = () => convertCoin("gold", "silver", 1, 2);
     window.addEventListener("resize", renderStatic);
 
     reset();
