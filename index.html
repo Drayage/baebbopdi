@@ -386,6 +386,54 @@
 
     .toast.show { display: flex; }
 
+    .hype {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: none;
+      place-items: center;
+      pointer-events: none;
+      background: radial-gradient(circle, rgba(255,255,255,.14), rgba(0,0,0,.08) 36%, transparent 68%);
+    }
+
+    .hype.show { display: grid; animation: hypeFade 1.35s ease-out forwards; }
+
+    .hype-card {
+      min-width: min(520px, calc(100vw - 28px));
+      padding: 20px;
+      border-radius: 8px;
+      border: 2px solid rgba(255, 255, 255, .72);
+      background: linear-gradient(135deg, rgba(20, 28, 40, .95), rgba(64, 36, 70, .95));
+      box-shadow: 0 0 60px rgba(98, 185, 255, .65), 0 0 100px rgba(255, 92, 112, .35);
+      text-align: center;
+      transform: scale(.92);
+      animation: hypePop 1.1s cubic-bezier(.2, 1.4, .35, 1) forwards;
+    }
+
+    .hype-title {
+      font-size: clamp(34px, 7vw, 76px);
+      font-weight: 1000;
+      line-height: .95;
+    }
+
+    .hype-sub {
+      margin-top: 10px;
+      color: #fff3c1;
+      font-size: clamp(16px, 3vw, 26px);
+      font-weight: 900;
+    }
+
+    @keyframes hypePop {
+      0% { transform: scale(.72) rotate(-2deg); filter: brightness(1.8); }
+      65% { transform: scale(1.08) rotate(1deg); }
+      100% { transform: scale(1) rotate(0); }
+    }
+
+    @keyframes hypeFade {
+      0%, 78% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
     @media (max-width: 900px) {
       header { grid-template-columns: 1fr; }
       .hud { justify-content: flex-start; }
@@ -484,6 +532,7 @@
   </div>
 
   <div class="toast" id="toast"></div>
+  <div class="hype" id="hype"><div class="hype-card"><div class="hype-title" id="hypeTitle"></div><div class="hype-sub" id="hypeSub"></div></div></div>
 
   <script>
     const ROUND_SECONDS = 24;
@@ -559,6 +608,20 @@
       node.classList.add("show");
       clearTimeout(toast.timer);
       toast.timer = setTimeout(() => node.classList.remove("show"), 1300);
+    }
+
+    function hype(tierKey, elementKey) {
+      const t = tier(tierKey);
+      if (!t || !t.splash) return;
+      const e = elem(elementKey);
+      $("hypeTitle").textContent = t.key === "legend" ? "전설 떴다!" : "다이아 떴다!";
+      $("hypeSub").textContent = `${e.icon} ${t.name} 유닛 확보. 라인 지우러 가자.`;
+      const node = $("hype");
+      node.classList.remove("show");
+      void node.offsetWidth;
+      node.classList.add("show");
+      clearTimeout(hype.timer);
+      hype.timer = setTimeout(() => node.classList.remove("show"), 1500);
     }
 
     function shuffle(array) {
@@ -785,6 +848,7 @@
       state.sellMode = false;
       state.dirty = true;
       toast(`${picked.name} ${element.icon} 뽑음`);
+      hype(picked.key, element.key);
       renderStatic();
     }
 
@@ -871,6 +935,7 @@
       state.selected = state.units[state.units.length - 1].id;
       state.sellMode = false;
       state.dirty = true;
+      hype(tierKey, element.key);
       return true;
     }
 
@@ -1065,6 +1130,10 @@
       let finalDamage = dmg;
       if (target === state.boss && state.boss?.round === 30 && state.mobs.length > 0) finalDamage *= .2;
       target.hp -= finalDamage;
+      if (splash) {
+        const p = targetPoint(unit.lane, target);
+        state.effects.push({ lane: unit.lane, x: p.x, y: p.y, color: elem(unit.elem).color, age: 0, kind: "splash" });
+      }
       if (unit.lane === "mob" && splash) {
         state.mobs.slice(0, 5).forEach((mob) => {
           if (mob !== target) mob.hp -= finalDamage * .35;
@@ -1235,16 +1304,37 @@
       state.effects.filter((effect) => effect.lane === lane).forEach((effect) => {
         const p = effect.age / .45;
         ctx.save();
-        ctx.globalAlpha = 1 - p;
-        ctx.strokeStyle = effect.color;
-        ctx.fillStyle = "rgba(255,48,77,.18)";
-        ctx.lineWidth = 4 * scale;
-        ctx.shadowColor = effect.color;
-        ctx.shadowBlur = 22;
-        ctx.beginPath();
-        ctx.arc(effect.x, effect.y, (18 + p * 26) * scale, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
+        if (effect.kind === "splash") {
+          ctx.globalAlpha = 1 - p;
+          ctx.strokeStyle = effect.color;
+          ctx.fillStyle = "rgba(255,255,255,.08)";
+          ctx.lineWidth = 5 * scale;
+          ctx.shadowColor = effect.color;
+          ctx.shadowBlur = 28;
+          ctx.beginPath();
+          ctx.arc(effect.x, effect.y, (24 + p * 58) * scale, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          for (let i = 0; i < 10; i++) {
+            const a = i / 10 * Math.PI * 2 + p * 1.8;
+            const r = (18 + p * 48) * scale;
+            ctx.beginPath();
+            ctx.arc(effect.x + Math.cos(a) * r, effect.y + Math.sin(a) * r, 3.5 * scale, 0, Math.PI * 2);
+            ctx.fillStyle = effect.color;
+            ctx.fill();
+          }
+        } else {
+          ctx.globalAlpha = 1 - p;
+          ctx.strokeStyle = effect.color;
+          ctx.fillStyle = "rgba(255,48,77,.18)";
+          ctx.lineWidth = 4 * scale;
+          ctx.shadowColor = effect.color;
+          ctx.shadowBlur = 22;
+          ctx.beginPath();
+          ctx.arc(effect.x, effect.y, (18 + p * 26) * scale, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        }
         ctx.restore();
       });
     }
