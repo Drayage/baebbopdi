@@ -231,12 +231,12 @@
       display: grid;
       place-items: center;
       font-weight: 1000;
-      font-size: clamp(20px, 3.2vw, 32px);
+      font-size: clamp(30px, 5vw, 48px);
       text-shadow: 0 2px 10px rgba(0, 0, 0, .45);
     }
 
     .unit::after {
-      content: attr(data-elem);
+      content: attr(data-tier);
       position: absolute;
       top: 5px;
       right: 5px;
@@ -246,7 +246,7 @@
       background: rgba(0, 0, 0, .5);
       display: grid;
       place-items: center;
-      font-size: 12px;
+      font-size: 11px;
     }
 
     .tier-iron { background: radial-gradient(circle, #8d939c, #4f5762); }
@@ -410,7 +410,7 @@
       <div class="hud">
         <div class="pill" id="roundPill">R 1</div>
         <div class="pill" id="attrPill">속성 무</div>
-        <div class="pill" id="coinPill">🪨 0 · I 0 · B 0 · 🥈 5</div>
+        <div class="pill" id="coinPill">🪨 0 · ⚙️ 0 · 🟤 0 · 🥈 5</div>
         <div class="pill" id="limitPill">🌀 0 / 100</div>
         <button class="btn" id="speedBtn">⏩ 1x</button>
         <button class="btn red" id="restartBtn">↻</button>
@@ -456,9 +456,9 @@
         <div class="upgrade-grid" id="upgrades"></div>
         <h2 class="panel-title" style="margin-top:12px;">코인 교환</h2>
         <div class="upgrade-grid">
-          <button class="upgrade" id="splitStone"><strong>🪨🪨 → I</strong><span class="small">돌 2개 조합</span></button>
-          <button class="upgrade" id="splitIron"><strong>I I → B</strong><span class="small">아이언코인 2개</span></button>
-          <button class="upgrade" id="splitBronze"><strong>B B → 🥈</strong><span class="small">브론즈코인 2개</span></button>
+          <button class="upgrade" id="splitStone"><strong>🪨 → ⚙️ 모두</strong><span class="small">돌 2개당 아이언</span></button>
+          <button class="upgrade" id="splitIron"><strong>⚙️ → 🟤 모두</strong><span class="small">아이언 2개당 브론즈</span></button>
+          <button class="upgrade" id="splitBronze"><strong>🟤 → 🥈 모두</strong><span class="small">브론즈 2개당 실버</span></button>
           <button class="upgrade" id="splitBoss"><strong>👑 → 💎💎</strong><span class="small">보스코인 분해</span></button>
           <button class="upgrade" id="splitDiamond"><strong>💎 → 🪙🪙</strong><span class="small">다이아코인 분해</span></button>
           <button class="upgrade" id="splitGold"><strong>🪙 → 🥈🥈</strong><span class="small">골드코인 분해</span></button>
@@ -657,11 +657,11 @@
 
     function coinText() {
       const c = state.coins;
-      return `🪨 ${c.stone} · I ${c.iron} · B ${c.bronze} · 🥈 ${c.silver} · 🪙 ${c.gold} · 💎 ${c.diamond} · 👑 ${c.boss}`;
+      return `🪨 ${c.stone} · ⚙️ ${c.iron} · 🟤 ${c.bronze} · 🥈 ${c.silver} · 🪙 ${c.gold} · 💎 ${c.diamond} · 👑 ${c.boss}`;
     }
 
     function coinLabel(type) {
-      return { stone: "🪨", iron: "I", bronze: "B", silver: "🥈", gold: "🪙", diamond: "💎", boss: "👑" }[type] || type;
+      return { stone: "🪨", iron: "⚙️", bronze: "🟤", silver: "🥈", gold: "🪙", diamond: "💎", boss: "👑" }[type] || type;
     }
 
     function reset() {
@@ -778,8 +778,8 @@
     function sellReward(unit) {
       const key = tier(unit.tier).key;
       if (key === "gold") return { type: "silver", amount: 1, label: "🥈 1" };
-      if (key === "silver") return { type: "bronze", amount: 1, label: "B 1" };
-      if (key === "bronze") return { type: "iron", amount: 1, label: "I 1" };
+      if (key === "silver") return { type: "bronze", amount: 1, label: "🟤 1" };
+      if (key === "bronze") return { type: "iron", amount: 1, label: "⚙️ 1" };
       if (key === "iron") return { type: "stone", amount: 1, label: "🪨 1" };
       if (key === "diamond") return { type: "gold", amount: 1, label: "🪙 1" };
       return { type: "diamond", amount: 1, label: "💎 1" };
@@ -847,6 +847,16 @@
       state.coins[from] -= fromAmount;
       state.coins[to] += toAmount;
       state.dirty = true;
+      renderStatic();
+    }
+
+    function convertAllCoin(from, to, fromAmount, toAmount) {
+      const batches = Math.floor(state.coins[from] / fromAmount);
+      if (batches < 1) return toast("재료 코인이 부족합니다.");
+      state.coins[from] -= batches * fromAmount;
+      state.coins[to] += batches * toAmount;
+      state.dirty = true;
+      toast(`${coinLabel(to)} ${batches * toAmount}개 조합`);
       renderStatic();
     }
 
@@ -1257,8 +1267,8 @@
       const e = elem(unit.elem);
       const node = document.createElement("div");
       node.className = `unit tier-${unit.tier}`;
-      node.dataset.elem = e.icon;
-      node.textContent = t.label;
+      node.dataset.tier = t.label;
+      node.textContent = e.icon;
       node.title = `${t.name} ${e.name} · ${unit.role} · 킬 ${unit.kills}`;
       return node;
     }
@@ -1333,9 +1343,9 @@
       state.speed = state.speed === 1 ? 2 : 1;
       renderStatic();
     };
-    $("splitStone").onclick = () => convertCoin("stone", "iron", 2, 1);
-    $("splitIron").onclick = () => convertCoin("iron", "bronze", 2, 1);
-    $("splitBronze").onclick = () => convertCoin("bronze", "silver", 2, 1);
+    $("splitStone").onclick = () => convertAllCoin("stone", "iron", 2, 1);
+    $("splitIron").onclick = () => convertAllCoin("iron", "bronze", 2, 1);
+    $("splitBronze").onclick = () => convertAllCoin("bronze", "silver", 2, 1);
     $("splitBoss").onclick = () => convertCoin("boss", "diamond", 1, 2);
     $("splitDiamond").onclick = () => convertCoin("diamond", "gold", 1, 2);
     $("splitGold").onclick = () => convertCoin("gold", "silver", 1, 2);
