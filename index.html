@@ -185,10 +185,10 @@
     }
 
     #bossSlots {
-      inset: 24% 24%;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      inset: 22% 16%;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       grid-template-rows: repeat(2, minmax(0, 1fr));
-      gap: 8px;
+      gap: 6px;
     }
 
     .slot {
@@ -387,7 +387,7 @@
         font-size: 11px;
       }
       #mobSlots { inset: 23% 8%; gap: 4px; }
-      #bossSlots { inset: 27% 18%; }
+      #bossSlots { inset: 28% 8%; gap: 5px; }
       .unit { width: min(52px, 84%); }
       .unit::after {
         top: 4px;
@@ -445,6 +445,8 @@
         <div style="display:flex; gap:8px; margin-bottom:9px; flex-wrap:wrap;">
           <button class="btn primary" id="drawBtn">🎰 1실버 뽑기</button>
           <button class="btn blue" id="sellBtn">💰 판매선택</button>
+          <button class="btn" id="deployLeftBtn">⬅ 대기석 모두 왼쪽배치</button>
+          <button class="btn red" id="sellBenchBtn">💰 대기석 모두 팔기</button>
         </div>
         <div class="bench" id="bench"></div>
       </div>
@@ -531,7 +533,11 @@
       const row = Math.floor(i / 5);
       return [.22 + col * .14, .33 + row * .105];
     });
-    const bossSlotLayout = [[.39, .40], [.61, .40], [.39, .60], [.61, .60]];
+    const bossSlotLayout = Array.from({ length: 10 }, (_, i) => {
+      const col = i % 5;
+      const row = Math.floor(i / 5);
+      return [.25 + col * .125, .42 + row * .16];
+    });
 
     function toast(text) {
       const node = $("toast");
@@ -652,6 +658,10 @@
     function coinText() {
       const c = state.coins;
       return `🪨 ${c.stone} · I ${c.iron} · B ${c.bronze} · 🥈 ${c.silver} · 🪙 ${c.gold} · 💎 ${c.diamond} · 👑 ${c.boss}`;
+    }
+
+    function coinLabel(type) {
+      return { stone: "🪨", iron: "I", bronze: "B", silver: "🥈", gold: "🪙", diamond: "💎", boss: "👑" }[type] || type;
     }
 
     function reset() {
@@ -782,6 +792,45 @@
       if (state.selected === unit.id) state.selected = null;
       state.dirty = true;
       toast(`판매 완료 · ${reward.label}`);
+      renderStatic();
+    }
+
+    function deployBenchToLeft() {
+      const benchUnits = state.units.filter((unit) => unit.lane === "bench");
+      if (!benchUnits.length) return toast("대기석에 유닛이 없습니다.");
+      let moved = 0;
+      benchUnits.forEach((unit) => {
+        for (let i = 0; i < 20; i++) {
+          if (!slotUnit("mob", i)) {
+            unit.lane = "mob";
+            unit.slot = i;
+            moved += 1;
+            break;
+          }
+        }
+      });
+      state.selected = null;
+      state.sellMode = false;
+      state.dirty = true;
+      toast(moved ? `${moved}기 왼쪽 배치` : "왼쪽 배치칸이 가득 찼습니다.");
+      renderStatic();
+    }
+
+    function sellAllBench() {
+      const benchUnits = state.units.filter((unit) => unit.lane === "bench");
+      if (!benchUnits.length) return toast("대기석에 판매할 유닛이 없습니다.");
+      const summary = {};
+      benchUnits.forEach((unit) => {
+        const reward = sellReward(unit);
+        state.coins[reward.type] += reward.amount;
+        summary[reward.type] = (summary[reward.type] || 0) + reward.amount;
+      });
+      state.units = state.units.filter((unit) => unit.lane !== "bench");
+      state.selected = null;
+      state.sellMode = false;
+      state.dirty = true;
+      const label = Object.entries(summary).map(([key, value]) => `${coinLabel(key)} ${value}`).join(", ");
+      toast(`대기석 ${benchUnits.length}기 판매 · ${label}`);
       renderStatic();
     }
 
@@ -1160,7 +1209,7 @@
     function renderStatic() {
       updateHud();
       renderSlots("mob", $("mobSlots"), 20);
-      renderSlots("boss", $("bossSlots"), 4);
+      renderSlots("boss", $("bossSlots"), 10);
       renderBench();
       renderUpgrades();
       renderDps();
@@ -1277,6 +1326,8 @@
 
     $("drawBtn").onclick = drawUnit;
     $("sellBtn").onclick = toggleSellMode;
+    $("deployLeftBtn").onclick = deployBenchToLeft;
+    $("sellBenchBtn").onclick = sellAllBench;
     $("restartBtn").onclick = reset;
     $("speedBtn").onclick = () => {
       state.speed = state.speed === 1 ? 2 : 1;
