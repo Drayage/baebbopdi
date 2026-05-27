@@ -522,9 +522,12 @@
           <button class="upgrade" id="bossPick"><strong>👑 → D픽</strong><span class="small">다이아 유닛 확정</span></button>
           <button class="upgrade" id="diamondPick"><strong>💎 → G픽</strong><span class="small">골드 유닛 확정</span></button>
           <button class="upgrade" id="goldPick"><strong>🪙 → S픽</strong><span class="small">실버 유닛 확정</span></button>
+          <button class="upgrade" id="splitBoss"><strong>👑 → 💎💎</strong><span class="small">보스코인 분해</span></button>
+          <button class="upgrade" id="splitDiamond"><strong>💎 → 🪙🪙</strong><span class="small">다이아코인 분해</span></button>
+          <button class="upgrade" id="splitGold"><strong>🪙 → 🥈🥈🥈</strong><span class="small">골드코인 분해</span></button>
           <button class="upgrade" id="buySlow"><strong>💎 슬로우</strong><span class="small">특수유닛 구매</span></button>
           <button class="upgrade" id="buyStun"><strong>💎 스턴</strong><span class="small">특수유닛 구매</span></button>
-          <button class="upgrade" id="buySplash"><strong>💎 광역</strong><span class="small">특수유닛 구매</span></button>
+          <button class="upgrade" id="buySplash"><strong>💎 버프</strong><span class="small">공속 +10%</span></button>
         </div>
         <div class="upgrade-grid" id="pickElements" style="display:none; margin-top:8px;">
           <button class="upgrade" data-pick-element="fire"><strong>🔥 불</strong><span class="small">픽 원소 선택</span></button>
@@ -545,12 +548,12 @@
     const bossRounds = [10, 20, 30];
     const elementCycle = ["fire", "grass", "water"];
     const tiers = [
-      { key: "iron", label: "I", name: "아이언", dmg: 12, rate: .92 },
-      { key: "bronze", label: "B", name: "브론즈", dmg: 26, rate: .8 },
-      { key: "silver", label: "S", name: "실버", dmg: 58, rate: .72 },
-      { key: "gold", label: "G", name: "골드", dmg: 130, rate: .62 },
-      { key: "diamond", label: "D", name: "다이아", dmg: 280, rate: .56, splash: true },
-      { key: "legend", label: "L", name: "전설", dmg: 760, rate: .5, splash: true }
+      { key: "iron", label: "I", name: "아이언", dmg: 2, aps: 1.5, splash: false },
+      { key: "bronze", label: "B", name: "브론즈", dmg: 5, aps: 2, splash: false },
+      { key: "silver", label: "S", name: "실버", dmg: 15, aps: 2.5, splash: false },
+      { key: "gold", label: "G", name: "골드", dmg: 40, aps: 3, splash: false },
+      { key: "diamond", label: "D", name: "다이아", dmg: 100, aps: 4, splash: true },
+      { key: "legend", label: "L", name: "전설", dmg: 300, aps: 6, splash: true }
     ];
 
     const elems = [
@@ -701,12 +704,12 @@
 
     function rollTier() {
       const r = Math.random();
-      if (r > .992) return tiers[5];
-      if (r > .97) return tiers[4];
-      if (r > .9) return tiers[3];
-      if (r > .75) return tiers[2];
-      if (r > .48) return tiers[1];
-      return tiers[0];
+      if (r < .6500) return tiers[0];
+      if (r < .8800) return tiers[1];
+      if (r < .9800) return tiers[2];
+      if (r < .9980) return tiers[3];
+      if (r < .9999) return tiers[4];
+      return tiers[5];
     }
 
     function emptyBench() {
@@ -730,13 +733,34 @@
       return 1;
     }
 
+    function unitElements(unit) {
+      return unit.elements || [unit.elem];
+    }
+
+    function upgradeMultiplier(unit) {
+      return unitElements(unit).reduce((mult, key) => mult * Math.pow(1.15, state.upgrades[key] || 0), 1);
+    }
+
+    function bestRelation(unit, targetElement) {
+      return Math.max(...unitElements(unit).map((key) => relation(key, targetElement)));
+    }
+
+    function attackSpeedMultiplier(unit) {
+      const hasBuff = state.units.some((ally) => ally.lane === unit.lane && ally.role === "buff");
+      return hasBuff && unit.role !== "buff" ? 1.1 : 1;
+    }
+
+    function attackInterval(unit) {
+      return 1 / (tier(unit.tier).aps * attackSpeedMultiplier(unit));
+    }
+
     function baseDamage(unit, targetElement) {
-      return tier(unit.tier).dmg * (1 + state.upgrades[unit.elem] * .16) * relation(unit.elem, targetElement);
+      return tier(unit.tier).dmg * upgradeMultiplier(unit) * bestRelation(unit, targetElement);
     }
 
     function effectiveDps(unit) {
       const targetElement = unit.lane === "mob" ? state.roundElement : state.boss?.element || null;
-      return baseDamage(unit, targetElement) / tier(unit.tier).rate;
+      return baseDamage(unit, targetElement) / attackInterval(unit);
     }
 
     function coinText() {
@@ -789,8 +813,16 @@
       return { hp: 16000, maxHp: 16000, t: 0, speed: 1 / (ROUND_SECONDS * 9), reward: 18, dead: false };
     }
 
+    function roundMobHp(round) {
+      const fixed = { 1: 4, 2: 10, 3: 20, 4: 40, 5: 100, 6: 180, 7: 300, 8: 500, 9: 800 };
+      if (fixed[round]) return fixed[round];
+      if (round >= 11 && round <= 19) return 1500 + (round - 11) * 400;
+      if (round >= 21 && round <= 29) return 8000 + (round - 21) * 1500;
+      return 0;
+    }
+
     function makeBoss(round) {
-      const hp = round === 10 ? 16000 : round === 20 ? 42000 : 90000;
+      const hp = round === 10 ? 20000 : round === 20 ? 200000 : 1000000;
       const deadlineRounds = round === 30 ? 1 : 6;
       return {
         round,
@@ -801,7 +833,8 @@
         element: currentBossElement(round),
         dead: false,
         finalTimer: round === 30 ? 75 : null,
-        summonTimer: 0
+        summonTimer: 0,
+        stun: 0
       };
     }
 
@@ -811,15 +844,14 @@
       state.spawnTimer = 0;
       state.roundElement = state.roundElements[round - 1] || null;
       state.affix = !bossRounds.includes(round) && Math.random() < .13 ? affixes[Math.floor(Math.random() * affixes.length)] : null;
-      const affix = state.affix || { hp: 1, speed: 1, count: 1 };
+      const affix = state.affix || { hp: 1, speed: 1 };
       state.wave = {
-        remaining: Math.ceil((14 + round * 4) * affix.count),
-        hp: Math.round((70 + round * 25) * affix.hp),
-        speed: (.045 + round * .003) * affix.speed,
+        remaining: bossRounds.includes(round) ? 0 : 100,
+        hp: Math.round(roundMobHp(round) * affix.hp),
+        speed: (.052 + round * .003) * affix.speed,
         element: state.roundElement,
         immune: !!state.affix?.immune
       };
-      if (!initial) state.coins.silver += state.affix ? 3 : 2;
       if (round === 10 || round === 20 || round === 30) {
         if (state.boss && !state.boss.dead) {
           lose(`${state.boss.round}라운드 보스를 제때 처치하지 못했습니다.`);
@@ -866,7 +898,7 @@
       if (key === "silver") return { type: "silver", amount: .5, label: "🥈 0.5" };
       if (key === "bronze") return { type: "silver", amount: .25, label: "🥈 0.25" };
       if (key === "iron") return { type: "silver", amount: .125, label: "🥈 0.125" };
-      if (key === "diamond") return { type: "gold", amount: 1, label: "🪙 1" };
+      if (key === "diamond") return { type: "diamond", amount: 1, label: "💎 1" };
       return { type: "diamond", amount: 1, label: "💎 1" };
     }
 
@@ -927,10 +959,10 @@
       renderStatic();
     }
 
-    function createBenchUnit(tierKey, role = "dps", elementKey = null) {
+    function createBenchUnit(tierKey, role = "dps", elementKey = null, elementsOverride = null) {
       if (!emptyBench()) return false;
       const element = elementKey ? elem(elementKey) : randomElem();
-      state.units.push({
+      const unit = {
         id: state.nextId++,
         lane: "bench",
         slot: null,
@@ -938,8 +970,11 @@
         elem: element.key,
         role,
         cd: Math.random() * .4,
+        specialTimer: Math.random() * 2,
         kills: 0
-      });
+      };
+      if (elementsOverride) unit.elements = elementsOverride;
+      state.units.push(unit);
       state.selected = state.units[state.units.length - 1].id;
       state.sellMode = false;
       state.dirty = true;
@@ -977,9 +1012,29 @@
     function buySpecial(role) {
       if (state.coins.diamond < 1) return toast("다이아코인이 부족합니다.");
       if (!emptyBench()) return toast("대기석이 가득 찼습니다.");
+      const spec = {
+        slow: { icon: "슬로우", primary: "fire", elements: ["fire", "water"] },
+        stun: { icon: "스턴", primary: "water", elements: ["water", "grass"] },
+        buff: { icon: "버프", primary: "grass", elements: ["grass", "fire"] }
+      }[role];
       state.coins.diamond -= 1;
-      createBenchUnit("silver", role);
-      toast(`${role === "slow" ? "슬로우" : role === "stun" ? "스턴" : "광역"} 특수유닛 획득`);
+      createBenchUnit("diamond", role, spec.primary, spec.elements);
+      toast(`${spec.icon} 특수유닛 획득`);
+      renderStatic();
+    }
+
+    function splitCoin(from) {
+      const map = {
+        boss: { to: "diamond", amount: 2 },
+        diamond: { to: "gold", amount: 2 },
+        gold: { to: "silver", amount: 3 }
+      };
+      const item = map[from];
+      if (!item || state.coins[from] < 1) return toast(`${coinLabel(from)} 코인이 부족합니다.`);
+      state.coins[from] -= 1;
+      state.coins[item.to] += item.amount;
+      state.dirty = true;
+      toast(`${coinLabel(from)} 1개 분해 · ${coinLabel(item.to)} ${item.amount}`);
       renderStatic();
     }
 
@@ -1024,6 +1079,8 @@
         speed: force.speed || state.wave.speed,
         elem: force.element === undefined ? state.wave.element : force.element,
         immune: force.immune === undefined ? state.wave.immune : force.immune,
+        summoned: !!force.summoned,
+        stun: 0,
         size: 7 + Math.random() * 5
       };
     }
@@ -1036,11 +1093,13 @@
 
     function bossCcFactor() {
       if (!state.boss) return 1;
-      const supports = state.units.filter((unit) => unit.lane === "boss");
-      const slow = supports.filter((unit) => unit.role === "slow").length;
-      const stun = supports.filter((unit) => unit.role === "stun").length;
       if (state.boss.round === 30) return 1;
-      return Math.max(.38, 1 - slow * .14 - stun * .22);
+      return laneSlowFactor("boss");
+    }
+
+    function laneSlowFactor(lane) {
+      const hasSlow = state.units.some((unit) => unit.lane === lane && unit.role === "slow");
+      return hasSlow ? .8 : 1;
     }
 
     function update(dt) {
@@ -1050,19 +1109,18 @@
 
       if (state.wave?.remaining > 0) {
         state.spawnTimer += dt;
-        const spawnEvery = Math.max(.12, .58 - state.round * .01);
+        const spawnEvery = .15;
         while (state.spawnTimer >= spawnEvery && state.wave.remaining > 0) {
           state.spawnTimer -= spawnEvery;
-          const batch = state.affix?.key === "elite" ? 1 : state.affix?.key === "swarm" ? 4 : state.round < 8 ? 1 : 2;
-          for (let i = 0; i < batch && state.wave.remaining > 0; i++) {
-            state.mobs.push(makeMob());
-            state.wave.remaining -= 1;
-          }
+          state.mobs.push(makeMob());
+          state.wave.remaining -= 1;
         }
       }
 
       state.mobs.forEach((mob) => {
-        mob.t += mob.speed * dt;
+        if (mob.stun > 0) mob.stun -= dt;
+        const cc = mob.stun > 0 ? 0 : mob.immune ? 1 : laneSlowFactor("mob");
+        mob.t += mob.speed * cc * dt;
         if (mob.t >= 1) {
           mob.t -= 1;
           mob.hp += mob.maxHp * .45;
@@ -1079,13 +1137,14 @@
       }
 
       if (state.boss && !state.boss.dead) {
-        state.boss.t += state.boss.speed * bossCcFactor() * dt;
+        if (state.boss.stun > 0) state.boss.stun -= dt;
+        state.boss.t += state.boss.speed * (state.boss.stun > 0 ? 0 : bossCcFactor()) * dt;
         if (state.boss.round === 30) {
           state.boss.finalTimer -= dt;
           state.boss.summonTimer += dt;
-          if (state.boss.summonTimer >= 7) {
+          if (state.boss.summonTimer >= 3) {
             state.boss.summonTimer = 0;
-            for (let i = 0; i < 18; i++) state.mobs.push(makeMob({ hp: 140 + state.round * 20, speed: .065, element: state.roundElement }));
+            for (let i = 0; i < 15; i++) state.mobs.push(makeMob({ hp: 8000, speed: .07, element: state.roundElement, summoned: true }));
             toast("최종 보스가 잡몹을 소환했습니다.");
           }
           if (state.boss.finalTimer <= 0) lose("최종 보스 제한시간 종료");
@@ -1100,9 +1159,16 @@
         if (!target) return;
         const from = slotPos(unit.lane, unit.slot);
         const to = targetPoint(unit.lane, target);
-        unit.cd = tier(unit.tier).rate;
+        unit.cd = attackInterval(unit);
+        if (unit.role === "stun") {
+          unit.specialTimer -= unit.cd;
+          if (unit.specialTimer <= 0) {
+            target.stun = Math.max(target.stun || 0, .5);
+            unit.specialTimer = 2;
+          }
+        }
         const dmg = baseDamage(unit, target.elem || target.element || null);
-        const isSplash = !!tier(unit.tier).splash || unit.role === "splash";
+        const isSplash = !!tier(unit.tier).splash;
         if (unit.elem === "fire") {
           hitTarget(unit, target, dmg, isSplash);
           state.effects.push({ lane: unit.lane, x: to.x, y: to.y, color: "#ff304d", age: 0, kind: "fire" });
@@ -1132,12 +1198,17 @@
       state.mobs = state.mobs.filter((mob) => mob.hp > 0);
 
       if (state.mobs.length >= 100) lose("잡몹이 100마리에 도달했습니다.");
-      if (state.roundTime > ROUND_SECONDS) nextRound();
+      if (!bossRounds.includes(state.round) && state.wave?.remaining === 0 && state.mobs.length === 0) {
+        state.coins.silver += state.affix ? 4 : 3;
+        toast(`라운드 클리어 · 🥈 +${state.affix ? 4 : 3}`);
+        nextRound();
+      }
       if (state.boss && state.boss.hp <= 0 && !state.boss.dead) {
         state.boss.dead = true;
         state.coins.boss += 1;
         toast("보스 처치 · 👑 1");
         state.dirty = true;
+        if (bossRounds.includes(state.round) && state.round < 30) nextRound();
       }
     }
 
@@ -1154,7 +1225,7 @@
     function hitTarget(unit, target, dmg, splash) {
       if (!target || target.hp <= 0) return;
       let finalDamage = dmg;
-      if (target === state.boss && state.boss?.round === 30 && state.mobs.length > 0) finalDamage *= .2;
+      if (target === state.boss && state.boss?.round === 30 && state.mobs.some((mob) => mob.summoned)) finalDamage *= .2;
       target.hp -= finalDamage;
       if (splash) {
         const p = targetPoint(unit.lane, target);
@@ -1167,7 +1238,6 @@
       }
       if (unit.lane === "mob" && target.hp <= 0) {
         unit.kills += 1;
-        if (Math.random() < .18) state.coins.silver += .125;
         state.dirty = true;
       }
       if (target === state.chest && target.hp <= 0 && !target.dead) {
@@ -1392,7 +1462,7 @@
       $("speedBtn").textContent = `⏩ ${state.speed}x`;
       $("mobCount").textContent = `${state.mobs.length}마리 · 잔여 ${state.wave?.remaining || 0}`;
       if (state.boss && !state.boss.dead) {
-        const shield = state.boss.round === 30 && state.mobs.length > 0 ? " · 실드 80%" : "";
+        const shield = state.boss.round === 30 && state.mobs.some((mob) => mob.summoned) ? " · 실드 80%" : "";
         $("bossInfo").textContent = `${state.boss.round}R 보스 ${elem(state.boss.element).icon} HP ${Math.ceil(state.boss.hp)} / ${state.boss.maxHp}${shield}`;
       } else if (state.chest && !state.chest.dead) $("bossInfo").textContent = `상자 HP ${Math.max(0, Math.ceil(state.chest.hp))} / ${state.chest.maxHp}`;
       else $("bossInfo").textContent = state.round < 10 ? "상자 없음" : "보스 없음";
@@ -1460,7 +1530,7 @@
         const cost = Math.floor(level / 3) + 1;
         return `<button class="upgrade" data-up="${item.key}">
           <strong>${item.icon} ${item.name} Lv.${level}</strong>
-          <span class="small">비용 🥈 ${cost} · 피해 +16%</span>
+          <span class="small">비용 🥈 ${cost} · 레벨당 15% 복리</span>
         </button>`;
       }).join("");
       document.querySelectorAll("[data-up]").forEach((button) => {
@@ -1505,9 +1575,12 @@
     $("bossPick").onclick = () => buyPick("boss", "diamond", "다이아 픽");
     $("diamondPick").onclick = () => buyPick("diamond", "gold", "골드 픽");
     $("goldPick").onclick = () => buyPick("gold", "silver", "실버 픽");
+    $("splitBoss").onclick = () => splitCoin("boss");
+    $("splitDiamond").onclick = () => splitCoin("diamond");
+    $("splitGold").onclick = () => splitCoin("gold");
     $("buySlow").onclick = () => buySpecial("slow");
     $("buyStun").onclick = () => buySpecial("stun");
-    $("buySplash").onclick = () => buySpecial("splash");
+    $("buySplash").onclick = () => buySpecial("buff");
     document.querySelectorAll("[data-pick-element]").forEach((button) => {
       button.onclick = () => finishPick(button.dataset.pickElement);
     });
