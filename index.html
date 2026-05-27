@@ -544,7 +544,7 @@
   <div class="hype" id="hype"><div class="hype-card"><div class="hype-title" id="hypeTitle"></div><div class="hype-sub" id="hypeSub"></div></div></div>
 
   <script>
-    const ROUND_SECONDS = 24;
+    const ROUND_SECONDS = 60;
     const bossRounds = [10, 20, 30];
     const elementCycle = ["fire", "grass", "water"];
     const tiers = [
@@ -576,6 +576,8 @@
       speed: 1,
       time: 0,
       roundTime: 0,
+      timeBank: 0,
+      roundLimit: ROUND_SECONDS,
       nextId: 1,
       selected: null,
       pendingPick: null,
@@ -704,12 +706,40 @@
 
     function rollTier() {
       const r = Math.random();
-      if (r < .6500) return tiers[0];
-      if (r < .8800) return tiers[1];
-      if (r < .9800) return tiers[2];
-      if (r < .9980) return tiers[3];
-      if (r < .9999) return tiers[4];
+      if (r < .45) return tiers[0];
+      if (r < .80) return tiers[1];
+      if (r < .93) return tiers[2];
+      if (r < .975) return tiers[3];
+      if (r < .99) return tiers[4];
       return tiers[5];
+    }
+
+    function rollUnitSpec() {
+      const r = Math.random();
+      if (r >= .995) {
+        const roles = [
+          { role: "slow", primary: "fire", elements: ["fire", "water"] },
+          { role: "stun", primary: "water", elements: ["water", "grass"] },
+          { role: "buff", primary: "grass", elements: ["grass", "fire"] }
+        ];
+        const spec = roles[Math.floor(Math.random() * roles.length)];
+        return { tierKey: "diamond", role: spec.role, elemKey: spec.primary, elements: spec.elements, special: true };
+      }
+      const picked = rollTierFor(r);
+      return { tierKey: picked.key, role: "dps", elemKey: randomElem().key, special: false };
+    }
+
+    function rollTierFor(r) {
+      if (r < .45) return tiers[0];
+      if (r < .80) return tiers[1];
+      if (r < .93) return tiers[2];
+      if (r < .975) return tiers[3];
+      if (r < .99) return tiers[4];
+      return tiers[5];
+    }
+
+    function specialRoleLabel(role) {
+      return { slow: "슬로우", stun: "스턴", buff: "버프" }[role] || role;
     }
 
     function emptyBench() {
@@ -772,6 +802,10 @@
       return { silver: "🥈", gold: "🪙", diamond: "💎", boss: "👑" }[type] || type;
     }
 
+    function formatTime(value) {
+      return Math.max(0, Math.ceil(value));
+    }
+
     function reset() {
       Object.assign(state, {
         round: 1,
@@ -779,6 +813,8 @@
         speed: 1,
         time: 0,
         roundTime: 0,
+        timeBank: 0,
+        roundLimit: ROUND_SECONDS,
         nextId: 1,
         selected: null,
         pendingPick: null,
@@ -841,6 +877,7 @@
     function startRound(round, initial = false) {
       state.round = round;
       state.roundTime = 0;
+      state.roundLimit = ROUND_SECONDS + state.timeBank;
       state.spawnTimer = 0;
       state.roundElement = state.roundElements[round - 1] || null;
       state.affix = !bossRounds.includes(round) && Math.random() < .13 ? affixes[Math.floor(Math.random() * affixes.length)] : null;
@@ -871,35 +908,38 @@
       if (state.gameOver) return;
       if (state.coins.silver < 1) return toast("실버코인이 부족합니다.");
       if (!emptyBench()) return toast("대기석이 가득 찼습니다.");
-      const picked = rollTier();
-      const element = randomElem();
+      const picked = rollUnitSpec();
+      const pickedTier = tier(picked.tierKey);
+      const element = elem(picked.elemKey);
       state.coins.silver -= 1;
       state.units.push({
         id: state.nextId++,
         lane: "bench",
         slot: null,
-        tier: picked.key,
+        tier: picked.tierKey,
         elem: element.key,
-        role: "dps",
+        role: picked.role,
+        elements: picked.elements,
         cd: Math.random() * .4,
+        specialTimer: Math.random() * 2,
         kills: 0
       });
       state.selected = state.units[state.units.length - 1].id;
       state.sellMode = false;
       state.dirty = true;
-      toast(`${picked.name} ${element.icon} 뽑음`);
-      hype(picked.key, element.key);
+      toast(picked.special ? `특수유닛 ${specialRoleLabel(picked.role)} 뽑음` : `${pickedTier.name} ${element.icon} 뽑음`);
+      hype(picked.tierKey, element.key);
       renderStatic();
     }
 
     function sellReward(unit) {
       const key = tier(unit.tier).key;
-      if (key === "gold") return { type: "silver", amount: 1, label: "🥈 1" };
-      if (key === "silver") return { type: "silver", amount: .5, label: "🥈 0.5" };
-      if (key === "bronze") return { type: "silver", amount: .25, label: "🥈 0.25" };
-      if (key === "iron") return { type: "silver", amount: .125, label: "🥈 0.125" };
+      if (key === "legend") return { type: "boss", amount: 1, label: "👑 1" };
       if (key === "diamond") return { type: "diamond", amount: 1, label: "💎 1" };
-      return { type: "diamond", amount: 1, label: "💎 1" };
+      if (key === "gold") return { type: "gold", amount: 1, label: "🪙 1" };
+      if (key === "silver") return { type: "silver", amount: 1, label: "🥈 1" };
+      if (key === "bronze") return { type: "silver", amount: .5, label: "🥈 0.5" };
+      return { type: "silver", amount: .25, label: "🥈 0.25" };
     }
 
     function sellUnit(unit) {
@@ -1102,6 +1142,22 @@
       return hasSlow ? .8 : 1;
     }
 
+    function settleRoundTime(cleared) {
+      if (cleared && state.roundTime < ROUND_SECONDS) {
+        state.timeBank += ROUND_SECONDS - state.roundTime;
+      } else if (state.roundTime > ROUND_SECONDS) {
+        state.timeBank = Math.max(0, state.timeBank - (state.roundTime - ROUND_SECONDS));
+      }
+    }
+
+    function forceNextRoundByTime() {
+      if (state.round >= 30) return lose("30라운드 제한시간 종료");
+      settleRoundTime(false);
+      state.wave.remaining = 0;
+      toast("시간 종료 · 다음 라운드 시작");
+      nextRound();
+    }
+
     function update(dt) {
       if (state.gameOver) return;
       state.time += dt;
@@ -1199,16 +1255,21 @@
 
       if (state.mobs.length >= 100) lose("잡몹이 100마리에 도달했습니다.");
       if (!bossRounds.includes(state.round) && state.wave?.remaining === 0 && state.mobs.length === 0) {
+        settleRoundTime(true);
         state.coins.silver += state.affix ? 4 : 3;
         toast(`라운드 클리어 · 🥈 +${state.affix ? 4 : 3}`);
         nextRound();
       }
+      if (!state.gameOver && state.roundTime >= state.roundLimit) forceNextRoundByTime();
       if (state.boss && state.boss.hp <= 0 && !state.boss.dead) {
         state.boss.dead = true;
         state.coins.boss += 1;
         toast("보스 처치 · 👑 1");
         state.dirty = true;
-        if (bossRounds.includes(state.round) && state.round < 30) nextRound();
+        if (bossRounds.includes(state.round) && state.round < 30) {
+          settleRoundTime(true);
+          nextRound();
+        }
       }
     }
 
@@ -1460,7 +1521,7 @@
       $("coinPill").textContent = coinText();
       $("limitPill").textContent = `🌀 ${state.mobs.length} / 100`;
       $("speedBtn").textContent = `⏩ ${state.speed}x`;
-      $("mobCount").textContent = `${state.mobs.length}마리 · 잔여 ${state.wave?.remaining || 0}`;
+      $("mobCount").textContent = `${state.mobs.length}마리 · 잔여 ${state.wave?.remaining || 0} · ⏳ ${formatTime(state.roundLimit - state.roundTime)}초 · 저축 ${formatTime(state.timeBank)}초`;
       if (state.boss && !state.boss.dead) {
         const shield = state.boss.round === 30 && state.mobs.some((mob) => mob.summoned) ? " · 실드 80%" : "";
         $("bossInfo").textContent = `${state.boss.round}R 보스 ${elem(state.boss.element).icon} HP ${Math.ceil(state.boss.hp)} / ${state.boss.maxHp}${shield}`;
