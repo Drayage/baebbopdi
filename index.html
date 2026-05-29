@@ -782,16 +782,24 @@
       return { dps: "딜러", slow: "슬로우", stun: "스턴", buff: "버프" }[role] || role;
     }
 
+    function targetElementForUnit(unit) {
+      if (unit.lane === "boss") return state.boss?.element || null;
+      return state.roundElement || null;
+    }
+
     function selectedUnitText() {
       const unit = selectedUnit();
       if (!unit) return "";
       const t = tier(unit.tier);
       const elementText = unitElements(unit).map((key) => elem(key).icon).join("");
-      const atk = Math.round(neutralDamage(unit));
-      const dps = Math.round(neutralDps(unit));
-      const aps = (1 / attackInterval(unit)).toFixed(1);
+      const targetElement = targetElementForUnit(unit);
+      const dps = Math.round(baseDamage(unit, targetElement) / attackInterval(unit));
+      const upgradeCount = unitElements(unit).reduce((sum, key) => sum + (state.upgrades[key] || 0), 0);
+      const upgradeBonus = Math.round((upgradeMultiplier(unit) - 1) * 100);
+      const relationText = targetElement ? `${elem(targetElement).icon} ${elem(targetElement).name}` : "없음";
+      const relationValue = bestRelation(unit, targetElement).toFixed(2).replace(/\.?0+$/, "");
       const place = unit.lane === "bench" ? "대기석" : unit.lane === "mob" ? "왼쪽" : "오른쪽";
-      return `선택: ${t.name} ${elementText} ${roleLabel(unit.role)} · 위치 ${place} · 무상성 1타 ${atk} · 무상성 DPS ${dps} · 공속 ${aps}/초 · 킬 ${unit.kills}`;
+      return `선택: ${t.name} ${elementText} ${roleLabel(unit.role)} · 위치 ${place} · DPS ${dps} · 업그레이드: ${upgradeCount}회 (+${upgradeBonus}%) · 상성: ${relationText}(x${relationValue}) · 킬 ${unit.kills}`;
     }
 
     function emptyBench() {
