@@ -249,8 +249,8 @@
       transform: translateY(.02em);
     }
 
-    .unit[data-special] .unit-emoji {
-      font-size: 13px;
+    .unit.special-unit .unit-emoji {
+      font-size: 30px;
       font-weight: 1000;
       letter-spacing: 0;
       text-shadow: 0 1px 2px rgba(0, 0, 0, .45);
@@ -802,7 +802,7 @@
     }
 
     function unitDisplayLabel(unit) {
-      if (unit.role !== "dps") return `${specialEffectIcon(unit.role)}${specialEffectLabel(unit.role)}`;
+      if (unit.role !== "dps") return specialEffectIcon(unit.role);
       return unitElements(unit).map((key) => elem(key).icon).join("");
     }
 
@@ -1795,15 +1795,13 @@
       const e = elem(unit.elem);
       const node = document.createElement("div");
       node.className = `unit tier-${unit.tier}`;
+      if (unit.role !== "dps") node.classList.add("special-unit");
       node.dataset.tier = t.label;
-      if (unit.role === "slow") node.dataset.special = "S";
-      if (unit.role === "stun") node.dataset.special = "T";
-      if (unit.role === "buff") node.dataset.special = "B";
       const icon = document.createElement("span");
       icon.className = "unit-emoji";
-      icon.textContent = unit.role === "dps" ? e.icon : `${specialEffectIcon(unit.role)}${specialEffectLabel(unit.role)}`;
+      icon.textContent = unit.role === "dps" ? e.icon : specialEffectIcon(unit.role);
       node.appendChild(icon);
-      if (unit.role === "dps" && unit.elements?.length > 1) {
+      if (unit.elements?.length > 1) {
         const marks = document.createElement("span");
         marks.className = "unit-elements";
         marks.textContent = unit.elements.map((key) => elem(key).icon).join("");
