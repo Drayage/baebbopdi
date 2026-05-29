@@ -654,9 +654,9 @@
           <button class="upgrade" id="splitBoss"><strong>👑 → 💎💎</strong><span class="small">보스코인 분해</span></button>
           <button class="upgrade" id="splitDiamond"><strong>💎 → 🪙🪙</strong><span class="small">다이아코인 분해</span></button>
           <button class="upgrade" id="splitGold"><strong>🪙 → 🥈🥈🥈</strong><span class="small">골드코인 분해</span></button>
-          <button class="upgrade" id="buySlow"><strong>💎 ❄️ 감속</strong><span class="small">불+물 업글 적용 · 딜 50%</span></button>
-          <button class="upgrade" id="buyStun"><strong>💎 ⚡ 기절</strong><span class="small">물+풀 업글 적용 · 딜 50%</span></button>
-          <button class="upgrade" id="buySplash"><strong>💎 ⏩ 공속</strong><span class="small">풀+불 업글 적용 · 딜 50%</span></button>
+          <button class="upgrade" id="buySlow"><strong>💎 ❄️ 감속</strong><span class="small">불+물 업글 절반 · 중첩불가</span></button>
+          <button class="upgrade" id="buyStun"><strong>💎 ⚡ 기절</strong><span class="small">물+풀 업글 절반 · 상성X</span></button>
+          <button class="upgrade" id="buySplash"><strong>💎 ⏩ 공속</strong><span class="small">풀+불 업글 절반 · 중첩불가</span></button>
         </div>
         <div class="upgrade-grid" id="pickElements" style="display:none; margin-top:8px;">
           <button class="upgrade" data-pick-element="fire"><strong>🔥 불</strong><span class="small">픽 원소 선택</span></button>
@@ -983,12 +983,14 @@
       const elementText = unitDisplayLabel(unit);
       const targetElement = targetElementForUnit(unit);
       const dps = Math.round(neutralDps(unit));
-      const upgradeCount = unitElements(unit).reduce((sum, key) => sum + (state.upgrades[key] || 0), 0);
+      const upgradeCount = upgradeLevelTotal(unit);
       const upgradeBonus = Math.round((upgradeMultiplier(unit) - 1) * 100);
-      const relationText = targetElement ? `${elem(targetElement).icon} ${elem(targetElement).name}` : "없음";
-      const relationValue = bestRelation(unit, targetElement).toFixed(2).replace(/\.?0+$/, "");
+      const upgradeFlat = upgradeFlatBonus(unit);
+      const relationText = unit.role !== "dps" ? "적용X" : targetElement ? `${elem(targetElement).icon} ${elem(targetElement).name}` : "없음";
+      const relationValue = unit.role !== "dps" ? "1" : bestRelation(unit, targetElement).toFixed(2).replace(/\.?0+$/, "");
+      const specialNote = unit.role !== "dps" ? " · 효율절반" : "";
       const place = unit.lane === "bench" ? "대기석" : unit.lane === "mob" ? "왼쪽" : "오른쪽";
-      return `선택: ${t.name} ${elementText} ${roleLabel(unit.role)} · 위치 ${place} · DPS ${dps} · 업그레이드: ${upgradeCount}회 (+${upgradeBonus}%) · 상성: ${relationText}(x${relationValue}) · 킬 ${unit.kills}`;
+      return `선택: ${t.name} ${elementText} ${roleLabel(unit.role)} · 위치 ${place} · DPS ${dps} · 업그레이드: ${upgradeCount}회 (+${upgradeBonus}%, ATK +${upgradeFlat.toFixed(upgradeFlat % 1 ? 1 : 0)}${specialNote}) · 상성: ${relationText}(x${relationValue}) · 킬 ${unit.kills}`;
     }
 
     function emptyBench() {
@@ -1016,11 +1018,25 @@
       return unit.elements || [unit.elem];
     }
 
+    function upgradeEfficiency(unit) {
+      return unit.role === "dps" ? 1 : .5;
+    }
+
+    function upgradeLevelTotal(unit) {
+      return unitElements(unit).reduce((sum, key) => sum + (state.upgrades[key] || 0), 0);
+    }
+
+    function upgradeFlatBonus(unit) {
+      return upgradeLevelTotal(unit) * upgradeEfficiency(unit);
+    }
+
     function upgradeMultiplier(unit) {
-      return unitElements(unit).reduce((mult, key) => mult * Math.pow(1.15, state.upgrades[key] || 0), 1);
+      const efficiency = upgradeEfficiency(unit);
+      return unitElements(unit).reduce((mult, key) => mult * Math.pow(1.15, (state.upgrades[key] || 0) * efficiency), 1);
     }
 
     function bestRelation(unit, targetElement) {
+      if (unit.role !== "dps") return 1;
       return Math.max(...unitElements(unit).map((key) => relation(key, targetElement)));
     }
 
@@ -1039,11 +1055,11 @@
     }
 
     function baseDamage(unit, targetElement) {
-      return unitBaseDamage(unit) * upgradeMultiplier(unit) * bestRelation(unit, targetElement);
+      return (unitBaseDamage(unit) + upgradeFlatBonus(unit)) * upgradeMultiplier(unit) * bestRelation(unit, targetElement);
     }
 
     function neutralDamage(unit) {
-      return unitBaseDamage(unit) * upgradeMultiplier(unit);
+      return (unitBaseDamage(unit) + upgradeFlatBonus(unit)) * upgradeMultiplier(unit);
     }
 
     function neutralDps(unit) {
@@ -2069,7 +2085,7 @@
         const cost = Math.floor(level / 3) + 1;
         return `<button class="upgrade" data-up="${item.key}">
           <strong>${item.icon} ${item.name} Lv.${level}</strong>
-          <span class="small">비용 🥈 ${cost} · 레벨당 15% 복리</span>
+          <span class="small">비용 🥈 ${cost} · ATK +1 · 15% 복리</span>
         </button>`;
       }).join("");
       document.querySelectorAll("[data-up]").forEach((button) => {
