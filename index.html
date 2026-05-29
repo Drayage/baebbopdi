@@ -1452,7 +1452,8 @@
     }
 
     function forceNextRoundByTime() {
-      if (state.round >= 30) return lose("30라운드 제한시간 종료");
+      if (state.boss && !state.boss.dead) return;
+      if (state.round >= 30) return;
       settleRoundTime(false);
       state.wave.remaining = 0;
       toast("시간 종료 · 다음 라운드 시작");
@@ -1504,12 +1505,8 @@
             for (let i = 0; i < 15; i++) state.mobs.push(makeMob({ hp: 8000, speed: .07, element: state.roundElement, summoned: true }));
             toast("최종 보스가 잡몹을 소환했습니다.");
           }
-          if (state.boss.finalTimer <= 0) lose("최종 보스 제한시간 종료");
         }
-        if (state.boss.t >= 1) {
-          if (state.boss.round === 30) state.boss.t = .999;
-          else lose("보스가 데드라인에 도달했습니다.");
-        }
+        if (state.boss.t >= 1) lose("보스가 데드라인에 도달했습니다.");
       }
 
       state.units.filter((unit) => unit.lane !== "bench").forEach((unit) => {
