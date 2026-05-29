@@ -775,6 +775,22 @@
       return { slow: "슬로우", stun: "스턴", buff: "버프" }[role] || role;
     }
 
+    function roleLabel(role) {
+      return { dps: "딜러", slow: "슬로우", stun: "스턴", buff: "버프" }[role] || role;
+    }
+
+    function selectedUnitText() {
+      const unit = selectedUnit();
+      if (!unit) return "";
+      const t = tier(unit.tier);
+      const elementText = unitElements(unit).map((key) => elem(key).icon).join("");
+      const atk = Math.round(neutralDamage(unit));
+      const dps = Math.round(neutralDps(unit));
+      const aps = (1 / attackInterval(unit)).toFixed(1);
+      const place = unit.lane === "bench" ? "대기석" : unit.lane === "mob" ? "왼쪽" : "오른쪽";
+      return `선택: ${t.name} ${elementText} ${roleLabel(unit.role)} · 위치 ${place} · 무상성 1타 ${atk} · 무상성 DPS ${dps} · 공속 ${aps}/초 · 킬 ${unit.kills}`;
+    }
+
     function emptyBench() {
       return state.units.filter((unit) => unit.lane === "bench").length < 10;
     }
@@ -819,6 +835,14 @@
 
     function baseDamage(unit, targetElement) {
       return tier(unit.tier).dmg * upgradeMultiplier(unit) * bestRelation(unit, targetElement);
+    }
+
+    function neutralDamage(unit) {
+      return tier(unit.tier).dmg * upgradeMultiplier(unit);
+    }
+
+    function neutralDps(unit) {
+      return neutralDamage(unit) / attackInterval(unit);
     }
 
     function effectiveDps(unit) {
@@ -1587,8 +1611,10 @@
         ? "게임 종료. 재시작으로 다시 도전하세요."
         : state.sellMode
           ? "판매선택 중입니다. 유닛을 탭하면 계속 판매됩니다."
-          : state.pendingPick
-            ? `${state.pendingPick.label}: 불/물/풀 중 하나를 고르세요.`
+        : state.pendingPick
+          ? `${state.pendingPick.label}: 불/물/풀 중 하나를 고르세요.`
+          : selectedUnit()
+            ? selectedUnitText()
           : `라운드 웨이브는 전체 속성 하나로 고정됩니다.${preview}`;
     }
 
