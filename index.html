@@ -1583,14 +1583,18 @@
     function hpGauge(target) {
       const hp = Math.max(0, target.hp);
       const maxHp = Math.max(1, target.maxHp);
-      if (maxHp < 5000) return { ratio: hp / maxHp, layers: 1 };
+      if (maxHp < 5000) return { ratio: hp / maxHp, layers: 1, remainingLayers: 1 };
       const layers = target.elite
         ? Math.min(28, Math.max(8, Math.ceil(maxHp / 2500)))
         : maxHp >= 100000 ? 10 : 5;
       const chunk = maxHp / layers;
-      if (hp <= 0) return { ratio: 0, layers };
+      if (hp <= 0) return { ratio: 0, layers, remainingLayers: 0 };
       const currentChunkHp = hp - Math.floor((hp - .0001) / chunk) * chunk;
-      return { ratio: Math.max(.02, Math.min(1, currentChunkHp / chunk)), layers };
+      return {
+        ratio: Math.max(.02, Math.min(1, currentChunkHp / chunk)),
+        layers,
+        remainingLayers: Math.max(1, Math.ceil(hp / chunk))
+      };
     }
 
     function drawHpGauge(ctx, x, y, width, height, target, color) {
@@ -1605,6 +1609,16 @@
           const tickX = x + width * i / gauge.layers;
           ctx.fillRect(tickX - .5, y, 1, height);
         }
+        const scale = window.devicePixelRatio || 1;
+        ctx.font = `900 ${Math.max(7, height * .82)}px system-ui, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.lineWidth = 2 * scale;
+        ctx.strokeStyle = "rgba(0,0,0,.8)";
+        ctx.fillStyle = "#fff";
+        const label = `x${gauge.remainingLayers}`;
+        ctx.strokeText(label, x + width / 2, y + height / 2 + .5 * scale);
+        ctx.fillText(label, x + width / 2, y + height / 2 + .5 * scale);
       }
     }
 
@@ -1620,7 +1634,8 @@
         ctx.arc(p.x, p.y, mob.size * scale, 0, Math.PI * 2);
         ctx.fill();
         ctx.shadowBlur = 0;
-        drawHpGauge(ctx, p.x - 14, p.y - 18, 28, 4, mob, mob.elite ? "#ffdf6e" : "#fff");
+        if (mob.elite) drawHpGauge(ctx, p.x - 18, p.y - 23, 36, 10, mob, "#ffdf6e");
+        else drawHpGauge(ctx, p.x - 14, p.y - 18, 28, 4, mob, "#fff");
       });
     }
 
@@ -1651,7 +1666,7 @@
         ctx.fillRect(-6, -28, 12, 56);
       }
       ctx.restore();
-      drawHpGauge(ctx, p.x - 48, p.y + 48, 96, 8, target, color);
+      drawHpGauge(ctx, p.x - 48, p.y + 48, 96, 11, target, color);
     }
 
     function drawShots(ctx, lane) {
