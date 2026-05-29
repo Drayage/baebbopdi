@@ -1429,9 +1429,8 @@
       let finalDamage = dmg;
       if (target === state.boss && state.boss?.round === 30 && state.mobs.some((mob) => mob.summoned)) finalDamage *= .2;
       const lane = target === state.boss || target === state.chest ? "boss" : "mob";
-      const applied = Math.min(target.hp, finalDamage);
       target.hp -= finalDamage;
-      recordDamage(unit, lane, applied);
+      recordDamage(unit, lane, finalDamage);
       if (splash) {
         const p = targetPoint(unit.lane, target);
         state.effects.push({ lane: unit.lane, x: p.x, y: p.y, color: elem(unit.elem).color, age: 0, kind: "splash" });
@@ -1440,9 +1439,8 @@
         state.mobs.slice(0, 5).forEach((mob) => {
           if (mob !== target) {
             const splashDamage = finalDamage * .35;
-            const splashApplied = Math.min(mob.hp, splashDamage);
             mob.hp -= splashDamage;
-            recordDamage(unit, "mob", splashApplied);
+            recordDamage(unit, "mob", splashDamage);
           }
         });
       }
