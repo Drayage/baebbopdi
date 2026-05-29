@@ -880,8 +880,8 @@
     function roundMobHp(round) {
       const fixed = { 1: 4, 2: 10, 3: 20, 4: 40, 5: 100, 6: 180, 7: 300, 8: 500, 9: 800 };
       if (fixed[round]) return fixed[round];
-      if (round >= 11 && round <= 19) return 1500 + (round - 11) * 400;
-      if (round >= 21 && round <= 29) return 8000 + (round - 21) * 1500;
+      if (round >= 11 && round <= 19) return 1100 + (round - 11) * 300;
+      if (round >= 21 && round <= 29) return 5500 + (round - 21) * 1063;
       return 0;
     }
 
