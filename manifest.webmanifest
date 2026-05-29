@@ -1,0 +1,32 @@
+{
+  "name": "배치 & 뽑기 디펜스",
+  "short_name": "배뽑디",
+  "description": "실시간 2Way 배치 & 뽑기 디펜스",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#10131a",
+  "theme_color": "#11151d",
+  "categories": ["games"],
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
