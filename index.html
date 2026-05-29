@@ -706,6 +706,9 @@
   <script>
     const ROUND_SECONDS = 45;
     const MOB_SPAWN_EVERY = .18;
+    const MOB_DANGER_COUNT = 80;
+    const MOB_CRITICAL_COUNT = 90;
+    const MOB_CRITICAL_SPAWN_MULTIPLIER = 4;
     const FINAL_BOSS_SECONDS = 90;
     const FINAL_SUMMON_EVERY = 20;
     const SAVE_KEY = "baebbopdi-save-v1";
@@ -1043,7 +1046,7 @@
       a.slot = b.slot;
       b.lane = aLane;
       b.slot = aSlot;
-      state.selected = b.id;
+      state.selected = null;
       state.sellMode = false;
       state.dirty = true;
       toast("유닛 위치 교환");
@@ -1547,7 +1550,7 @@
       if (!unit) return toast("유닛을 먼저 선택하세요.");
       unit.lane = lane;
       unit.slot = slot;
-      state.selected = unit.id;
+      state.selected = null;
       state.sellMode = false;
       state.dirty = true;
       toast(lane === "mob" ? "왼쪽 라인 배치" : "오른쪽 라인 배치");
@@ -1617,7 +1620,7 @@
 
       if (state.wave?.remaining > 0) {
         state.spawnTimer += dt;
-        const spawnEvery = MOB_SPAWN_EVERY;
+        const spawnEvery = state.mobs.length >= MOB_CRITICAL_COUNT ? MOB_SPAWN_EVERY * MOB_CRITICAL_SPAWN_MULTIPLIER : MOB_SPAWN_EVERY;
         while (state.spawnTimer >= spawnEvery && state.wave.remaining > 0) {
           state.spawnTimer -= spawnEvery;
           state.mobs.push(makeMob());
@@ -2073,7 +2076,8 @@
       const attr = state.roundElement ? `${elem(state.roundElement).icon} ${elem(state.roundElement).name}` : "무";
       $("attrPill").textContent = `속성 ${attr}${state.affix ? ` · ${state.affix.label}` : ""}`;
       $("coinPill").textContent = coinText();
-      const mobDanger = state.mobs.length >= 90;
+      const mobDanger = state.mobs.length >= MOB_DANGER_COUNT;
+      const mobCritical = state.mobs.length >= MOB_CRITICAL_COUNT;
       const bossDanger = !!(state.boss && !state.boss.dead && state.boss.t >= .9);
       const screenDanger = state.started && !state.gameOver && (mobDanger || bossDanger);
       $("limitPill").textContent = `🌀 ${state.mobs.length} / 100`;
@@ -2095,8 +2099,10 @@
         ? "게임 종료. 재시작으로 다시 도전하세요."
         : !state.started
           ? "게임 시작 버튼을 눌러 1라운드를 시작하세요."
+        : mobCritical
+          ? "⚠️ 초위험: 잡몹 90마리 이상. 스폰이 느려진 지금 강한 유닛을 왼쪽으로 옮기세요."
         : mobDanger
-          ? "⚠️ 위험: 잡몹이 90마리를 넘었습니다. 왼쪽 라인 딜러를 더 배치하세요."
+          ? "⚠️ 위험: 잡몹이 80마리를 넘었습니다. 왼쪽 라인 딜러를 더 배치하세요."
         : bossDanger
           ? "⚠️ 위험: 보스가 데드라인 직전입니다. 오른쪽 라인 화력을 집중하세요."
         : state.sellMode
@@ -2157,7 +2163,7 @@
             if (!selected || selected.lane === "bench") return;
             selected.lane = "bench";
             selected.slot = null;
-            state.selected = selected.id;
+            state.selected = null;
             state.sellMode = false;
             state.dirty = true;
             toast("대기석으로 복귀");
