@@ -907,6 +907,23 @@
       return Math.max(0, Math.ceil(value));
     }
 
+    function formatHp(value) {
+      const n = Math.max(0, Math.ceil(value));
+      if (n >= 100000000) {
+        const v = n / 100000000;
+        return `${Number.isInteger(v) ? v : v.toFixed(1)}억`;
+      }
+      if (n >= 10000) {
+        const v = n / 10000;
+        return `${Number.isInteger(v) ? v : v.toFixed(1)}만`;
+      }
+      if (n >= 1000) {
+        const v = n / 1000;
+        return `${Number.isInteger(v) ? v : v.toFixed(1)}천`;
+      }
+      return `${n}`;
+    }
+
     function reset() {
       Object.assign(state, {
         round: 1,
@@ -1705,8 +1722,8 @@
       $("mobCount").textContent = `${state.mobs.length}마리 · 잔여 ${state.wave?.remaining || 0} · ⏳ ${formatTime(state.roundLimit - state.roundTime)}초 · 저축 ${formatTime(state.timeBank)}초`;
       if (state.boss && !state.boss.dead) {
         const shield = state.boss.round === 30 && state.mobs.some((mob) => mob.summoned) ? " · 실드 80%" : "";
-        $("bossInfo").textContent = `${state.boss.round}R 보스 ${elem(state.boss.element).icon} HP ${Math.ceil(state.boss.hp)} / ${state.boss.maxHp}${shield}`;
-      } else if (state.chest && !state.chest.dead) $("bossInfo").textContent = `상자 Lv.${state.chest.level} HP ${Math.max(0, Math.ceil(state.chest.hp))} / ${state.chest.maxHp} · 🥈 ${state.chest.reward}`;
+        $("bossInfo").textContent = `${state.boss.round}R 보스 ${elem(state.boss.element).icon} HP ${formatHp(state.boss.hp)} / ${formatHp(state.boss.maxHp)}${shield}`;
+      } else if (state.chest && !state.chest.dead) $("bossInfo").textContent = `상자 Lv.${state.chest.level} HP ${formatHp(state.chest.hp)} / ${formatHp(state.chest.maxHp)} · 🥈 ${state.chest.reward}`;
       else $("bossInfo").textContent = state.round < 10 ? "상자 없음" : "보스 없음";
       const preview = state.round >= 5 ? ` · 보스예고 ${state.bossPreview.map((boss) => `${boss.round}R ${elem(boss.element).icon}`).join(" ")}` : "";
       $("statusText").textContent = state.gameOver
