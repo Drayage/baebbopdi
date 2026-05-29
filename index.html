@@ -224,8 +224,10 @@
 
     .unit {
       position: relative;
-      width: min(58px, 78%);
-      height: min(58px, 78%);
+      width: min(54px, 76%);
+      max-width: 76%;
+      height: auto;
+      aspect-ratio: 1 / 1;
       box-sizing: border-box;
       border-radius: 8px;
       border: 1px solid rgba(255, 255, 255, .45);
@@ -236,6 +238,15 @@
       line-height: 1;
       text-shadow: 0 2px 10px rgba(0, 0, 0, .45);
       pointer-events: none;
+    }
+
+    .unit-emoji {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      line-height: 1;
+      transform: translateY(.02em);
     }
 
     .unit::after {
@@ -264,6 +275,21 @@
       display: grid;
       place-items: center;
       font-size: 12px;
+    }
+
+    .unit-elements {
+      position: absolute;
+      left: 50%;
+      bottom: 5px;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 1px;
+      padding: 1px 4px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, .55);
+      font-size: 10px;
+      line-height: 1;
+      white-space: nowrap;
     }
 
     .tier-iron { background: radial-gradient(circle, #8d939c, #4f5762); }
@@ -453,7 +479,7 @@
       }
       #mobSlots { inset: 23% 8%; gap: 4px; }
       #bossSlots { inset: 28% 8%; gap: 5px; }
-      .unit { width: min(52px, 84%); }
+      .unit { width: min(50px, 82%); max-width: 82%; }
       .unit::after {
         top: 4px;
         right: 4px;
@@ -1558,10 +1584,19 @@
       const node = document.createElement("div");
       node.className = `unit tier-${unit.tier}`;
       node.dataset.tier = t.label;
-      if (unit.role === "slow") node.dataset.special = "❄️";
-      if (unit.role === "stun") node.dataset.special = "⚡";
-      if (unit.role === "buff") node.dataset.special = "💥";
-      node.textContent = e.icon;
+      if (unit.role === "slow") node.dataset.special = "S";
+      if (unit.role === "stun") node.dataset.special = "T";
+      if (unit.role === "buff") node.dataset.special = "B";
+      const icon = document.createElement("span");
+      icon.className = "unit-emoji";
+      icon.textContent = e.icon;
+      node.appendChild(icon);
+      if (unit.elements?.length > 1) {
+        const marks = document.createElement("span");
+        marks.className = "unit-elements";
+        marks.textContent = unit.elements.map((key) => elem(key).icon).join("");
+        node.appendChild(marks);
+      }
       node.title = `${t.name} ${e.name} · ${unit.role} · 킬 ${unit.kills}`;
       return node;
     }
