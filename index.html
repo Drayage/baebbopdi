@@ -78,6 +78,7 @@
       flex-wrap: wrap;
       justify-content: flex-end;
       gap: 8px;
+      position: relative;
     }
 
     .pill, .btn {
@@ -115,6 +116,41 @@
       outline-offset: -4px;
       background: linear-gradient(135deg, #ff5c70, #ff9f52);
       color: #fff;
+    }
+
+    .records-panel {
+      position: absolute;
+      z-index: 30;
+      right: 0;
+      top: calc(100% + 8px);
+      width: min(420px, calc(100vw - 24px));
+      padding: 10px;
+      border: 1px solid rgba(255, 255, 255, .16);
+      border-radius: 8px;
+      background: rgba(15, 19, 27, .98);
+      box-shadow: var(--shadow);
+      display: grid;
+      gap: 7px;
+    }
+
+    .records-panel[hidden] {
+      display: none;
+    }
+
+    .record-row {
+      display: grid;
+      grid-template-columns: 64px 1fr;
+      gap: 8px;
+      padding: 8px;
+      border-radius: 7px;
+      background: rgba(255, 255, 255, .06);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .record-round {
+      font-weight: 1000;
+      color: #ffd460;
     }
 
     .status {
@@ -511,7 +547,9 @@
         <div class="pill" id="coinPill">🥈 5.000 · 🪙 0 · 💎 0 · 👑 0</div>
         <div class="pill" id="limitPill">🌀 0 / 100</div>
         <button class="btn" id="speedBtn">⏩ 1x</button>
+        <button class="btn" id="recordsBtn">📋</button>
         <button class="btn red" id="restartBtn">↻</button>
+        <div class="records-panel" id="recordsPanel" hidden></div>
       </div>
     </header>
 
@@ -636,6 +674,7 @@
       affix: null,
       wave: null,
       upgrades: { fire: 0, water: 0, grass: 0 },
+      stats: { totalDraws: 0, diamondDraws: 0, legendDraws: 0 },
       spawnTimer: 0,
       last: performance.now(),
       dirty: true
@@ -776,6 +815,28 @@
       state.maxSpeed = next;
       saveProgress({ maxSpeed: next });
       return true;
+    }
+
+    function recentRecords() {
+      const records = loadSave().records;
+      return Array.isArray(records) ? records.slice(0, 5) : [];
+    }
+
+    function recordRun(result) {
+      const record = {
+        at: Date.now(),
+        result,
+        round: state.round,
+        totalDraws: state.stats.totalDraws,
+        diamondDraws: state.stats.diamondDraws,
+        legendDraws: state.stats.legendDraws,
+        upgrades: { ...state.upgrades }
+      };
+      saveProgress({ records: [record, ...recentRecords()].slice(0, 5) });
+    }
+
+    function shouldRecordRestart() {
+      return !state.gameOver && (state.round > 1 || state.stats.totalDraws > 0 || Object.values(state.upgrades).some(Boolean));
     }
 
     function rollTier() {
@@ -983,6 +1044,7 @@
         affix: null,
         wave: null,
         upgrades: { fire: 0, water: 0, grass: 0 },
+        stats: { totalDraws: 0, diamondDraws: 0, legendDraws: 0 },
         spawnTimer: 0,
         last: performance.now(),
         dirty: true
@@ -1079,6 +1141,9 @@
         kills: 0
       });
       state.selected = state.units[state.units.length - 1].id;
+      state.stats.totalDraws += 1;
+      if (!picked.special && picked.tierKey === "diamond") state.stats.diamondDraws += 1;
+      if (picked.tierKey === "legend") state.stats.legendDraws += 1;
       state.sellMode = false;
       state.dirty = true;
       toast(picked.special ? `특수유닛 ${specialRoleLabel(picked.role)} 뽑음` : `${pickedTier.name} ${element.icon} 뽑음`);
@@ -1482,6 +1547,8 @@
         if (bossRounds.includes(state.round) && state.round < 30) {
           settleRoundTime(true);
           nextRound();
+        } else if (state.boss.round === 30) {
+          win();
         }
       }
     }
@@ -1563,9 +1630,20 @@
     }
 
     function lose(text) {
+      if (state.gameOver) return;
       state.gameOver = true;
       state.speed = 1;
+      recordRun("패배");
       toast(`패배: ${text}`);
+      renderStatic();
+    }
+
+    function win() {
+      if (state.gameOver) return;
+      state.gameOver = true;
+      state.speed = 1;
+      recordRun("클리어");
+      toast("30라운드 클리어!");
       renderStatic();
     }
 
@@ -1779,6 +1857,7 @@
       $("pickElements").style.display = state.pendingPick ? "grid" : "none";
       $("app").classList.toggle("sell-mode", state.sellMode);
       $("sellBtn").classList.toggle("active", state.sellMode);
+      if (!$("recordsPanel").hidden) renderRecords();
       state.dirty = false;
     }
 
@@ -1914,6 +1993,36 @@
         : `<div class="small">필드에 유닛을 배치하면 최근 실제 DPS가 표시됩니다.</div>`;
     }
 
+    function recordText(record) {
+      const up = record.upgrades || {};
+      return `<div class="record-row">
+        <div class="record-round">R ${record.round}<br>${record.result}</div>
+        <div>뽑기 ${record.totalDraws} · 전설 ${record.legendDraws} · 다이아 ${record.diamondDraws}<br>
+        업글 🔥${up.fire || 0} 💧${up.water || 0} 🌿${up.grass || 0}</div>
+      </div>`;
+    }
+
+    function renderRecords() {
+      const records = recentRecords();
+      $("recordsPanel").innerHTML = records.length
+        ? `<strong>최근 5판 기록</strong>${records.map(recordText).join("")}`
+        : `<strong>최근 5판 기록</strong><div class="small">아직 저장된 기록이 없습니다.</div>`;
+    }
+
+    function toggleRecords() {
+      const panel = $("recordsPanel");
+      const open = panel.hidden;
+      if (open) renderRecords();
+      panel.hidden = !open;
+      $("recordsBtn").classList.toggle("active", open);
+    }
+
+    function restartGame() {
+      if (shouldRecordRestart()) recordRun("재시작");
+      reset();
+      renderRecords();
+    }
+
     function loop(now) {
       const raw = Math.min(.05, (now - state.last) / 1000);
       state.last = now;
@@ -1932,7 +2041,8 @@
     $("moveTopLeftBtn").onclick = () => moveTopUnitsToLane("mob");
     $("moveTopRightBtn").onclick = () => moveTopUnitsToLane("boss");
     $("sellBenchBtn").onclick = sellAllBench;
-    $("restartBtn").onclick = reset;
+    $("restartBtn").onclick = restartGame;
+    $("recordsBtn").onclick = toggleRecords;
     $("speedBtn").onclick = () => {
       state.speed = state.speed >= state.maxSpeed ? 1 : state.speed + 1;
       renderStatic();
