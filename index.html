@@ -663,7 +663,7 @@
           <button class="upgrade" data-pick-element="water"><strong>💧 물</strong><span class="small">픽 원소 선택</span></button>
           <button class="upgrade" data-pick-element="grass"><strong>🌿 풀</strong><span class="small">픽 원소 선택</span></button>
         </div>
-        <h2 class="panel-title" style="margin-top:12px;">실시간 DPS</h2>
+        <h2 class="panel-title" style="margin-top:12px;">최근 5초 대미지</h2>
         <div class="dps-list" id="dpsList"></div>
       </div>
     </section>
@@ -1003,6 +1003,28 @@
 
     function selectedUnit() {
       return state.units.find((unit) => unit.id === state.selected);
+    }
+
+    function clearSelection() {
+      if (!state.selected && !state.sellMode) return;
+      state.selected = null;
+      state.sellMode = false;
+      state.dirty = true;
+      renderStatic();
+    }
+
+    function swapUnits(a, b) {
+      const aLane = a.lane;
+      const aSlot = a.slot;
+      a.lane = b.lane;
+      a.slot = b.slot;
+      b.lane = aLane;
+      b.slot = aSlot;
+      state.selected = b.id;
+      state.sellMode = false;
+      state.dirty = true;
+      toast("유닛 위치 교환");
+      renderStatic();
     }
 
     function relation(attacker, defender) {
@@ -1449,6 +1471,8 @@
       const current = slotUnit(lane, slot);
       if (current) {
         if (state.sellMode) return sellUnit(current);
+        const selected = selectedUnit();
+        if (selected && selected.id !== current.id) return swapUnits(selected, current);
         state.selected = current.id;
         state.dirty = true;
         renderStatic();
@@ -1659,12 +1683,11 @@
       state.damageEvents = state.damageEvents.filter((event) => event.time >= cutoff);
     }
 
-    function recentDps(unit, lane) {
+    function recentDamage(unit, lane) {
       const cutoff = state.time - 5;
-      const total = state.damageEvents.reduce((sum, event) => {
+      return state.damageEvents.reduce((sum, event) => {
         return event.unitId === unit.id && event.lane === lane && event.time >= cutoff ? sum + event.amount : sum;
       }, 0);
-      return total / 5;
     }
 
     function hitTarget(unit, target, dmg, splash) {
@@ -2070,6 +2093,8 @@
             return;
           }
           if (state.sellMode) return sellUnit(unit);
+          const selected = selectedUnit();
+          if (selected && selected.id !== unit.id) return swapUnits(selected, unit);
           state.selected = unit.id;
           renderStatic();
         };
@@ -2096,22 +2121,22 @@
     function renderDps() {
       const rowsFor = (lane) => state.units.filter((unit) => unit.lane !== "bench").map((unit) => ({
         unit,
-        dps: Math.round(recentDps(unit, lane))
-      })).filter((row) => row.dps > 0).sort((a, b) => b.dps - a.dps).slice(0, 6);
+        damage: Math.round(recentDamage(unit, lane))
+      })).filter((row) => row.damage > 0).sort((a, b) => b.damage - a.damage).slice(0, 6);
       const mobRows = rowsFor("mob");
       const bossRows = rowsFor("boss");
-      const max = Math.max(1, ...mobRows.map((row) => row.dps), ...bossRows.map((row) => row.dps));
+      const max = Math.max(1, ...mobRows.map((row) => row.damage), ...bossRows.map((row) => row.damage));
       const section = (title, rows) => rows.length
-        ? `<div class="small">${title}</div>` + rows.map(({ unit, dps }) => {
+        ? `<div class="small">${title}</div>` + rows.map(({ unit, damage }) => {
           const t = tier(unit.tier);
           const label = unitDisplayLabel(unit);
-          const width = Math.max(5, dps / max * 100);
-          return `<div class="dps-row"><span>${t.label} ${label}</span><span class="dps-track"><span class="dps-fill" style="width:${width}%"></span></span><span>${dps}</span></div>`;
+          const width = Math.max(5, damage / max * 100);
+          return `<div class="dps-row"><span>${t.label} ${label}</span><span class="dps-track"><span class="dps-fill" style="width:${width}%"></span></span><span>${damage}</span></div>`;
         }).join("")
         : `<div class="small">${title} · 최근 딜 없음</div>`;
       $("dpsList").innerHTML = state.units.some((unit) => unit.lane !== "bench")
-        ? section("일반몹 최근 DPS", mobRows) + section("보스/상자 최근 DPS", bossRows)
-        : `<div class="small">필드에 유닛을 배치하면 최근 실제 DPS가 표시됩니다.</div>`;
+        ? section("일반몹 최근 5초 대미지", mobRows) + section("보스/상자 최근 5초 대미지", bossRows)
+        : `<div class="small">필드에 유닛을 배치하면 최근 5초 실제 대미지가 표시됩니다.</div>`;
     }
 
     function recordText(record) {
@@ -2181,6 +2206,14 @@
     document.querySelectorAll("[data-pick-element]").forEach((button) => {
       button.onclick = () => finishPick(button.dataset.pickElement);
     });
+    $("mobCanvas").onclick = clearSelection;
+    $("bossCanvas").onclick = clearSelection;
+    $("mobLane").onclick = (event) => {
+      if (event.target === $("mobLane")) clearSelection();
+    };
+    $("bossLane").onclick = (event) => {
+      if (event.target === $("bossLane")) clearSelection();
+    };
     window.addEventListener("resize", renderStatic);
 
     reset(false);
