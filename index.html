@@ -508,6 +508,41 @@
       font-weight: 900;
     }
 
+    .start-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 35;
+      display: grid;
+      place-items: center;
+      padding: 22px;
+      background: radial-gradient(circle at 50% 32%, rgba(98, 185, 255, .2), rgba(11, 15, 23, .94) 58%);
+    }
+
+    .start-screen[hidden] {
+      display: none;
+    }
+
+    .start-card {
+      width: min(520px, 100%);
+      display: grid;
+      gap: 14px;
+      justify-items: center;
+      text-align: center;
+    }
+
+    .start-title {
+      font-size: clamp(48px, 12vw, 96px);
+      line-height: .92;
+      font-weight: 1000;
+      color: #fff;
+      text-shadow: 0 0 34px rgba(98, 185, 255, .55);
+    }
+
+    .start-sub {
+      color: #c7d5eb;
+      font-weight: 900;
+    }
+
     @keyframes hypePop {
       0% { transform: scale(.72) rotate(-2deg); filter: brightness(1.8); }
       65% { transform: scale(1.08) rotate(1deg); }
@@ -634,6 +669,14 @@
     </section>
   </div>
 
+  <div class="start-screen" id="startScreen">
+    <div class="start-card">
+      <div class="start-title">배뽑디</div>
+      <div class="start-sub">배치하고 뽑아서 30라 보스를 잡아내세요.</div>
+      <button class="btn primary" id="startBtn">게임 시작</button>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
   <div class="hype" id="hype"><div class="hype-card"><div class="hype-title" id="hypeTitle"></div><div class="hype-sub" id="hypeSub"></div></div></div>
 
@@ -641,7 +684,7 @@
     const ROUND_SECONDS = 45;
     const MOB_SPAWN_EVERY = .18;
     const FINAL_BOSS_SECONDS = 90;
-    const FINAL_SUMMON_EVERY = 8;
+    const FINAL_SUMMON_EVERY = 20;
     const SAVE_KEY = "baebbopdi-save-v1";
     const bossRounds = [10, 20, 30];
     const elementCycle = ["fire", "grass", "water"];
@@ -681,6 +724,7 @@
       selected: null,
       pendingPick: null,
       sellMode: false,
+      started: false,
       gameOver: false,
       units: [],
       mobs: [],
@@ -1041,7 +1085,7 @@
       return `${n}`;
     }
 
-    function reset() {
+    function reset(started = true) {
       Object.assign(state, {
         round: 1,
         coins: { silver: 5, gold: 0, diamond: 0, boss: 0 },
@@ -1055,6 +1099,7 @@
         selected: null,
         pendingPick: null,
         sellMode: false,
+        started,
         gameOver: false,
         units: [],
         mobs: [],
@@ -1075,7 +1120,7 @@
         dirty: true
       });
       startRound(1, true);
-      toast("새 게임 시작");
+      if (started) toast("새 게임 시작");
       renderStatic();
     }
 
@@ -1909,6 +1954,7 @@
       $("pickElements").style.display = state.pendingPick ? "grid" : "none";
       $("app").classList.toggle("sell-mode", state.sellMode);
       $("sellBtn").classList.toggle("active", state.sellMode);
+      $("startScreen").hidden = state.started;
       if (!$("recordsPanel").hidden) renderRecords();
       state.dirty = false;
     }
@@ -1938,6 +1984,8 @@
       const preview = state.round >= 5 ? ` · 보스예고 ${state.bossPreview.map((boss) => `${boss.round}R ${elem(boss.element).icon}`).join(" ")}` : "";
       $("statusText").textContent = state.gameOver
         ? "게임 종료. 재시작으로 다시 도전하세요."
+        : !state.started
+          ? "게임 시작 버튼을 눌러 1라운드를 시작하세요."
         : mobDanger
           ? "⚠️ 위험: 잡몹이 90마리를 넘었습니다. 왼쪽 라인 딜러를 더 배치하세요."
         : state.sellMode
@@ -2076,14 +2124,14 @@
 
     function restartGame() {
       if (shouldRecordRestart()) recordRun("재시작");
-      reset();
+      reset(true);
       renderRecords();
     }
 
     function loop(now) {
       const raw = Math.min(.05, (now - state.last) / 1000);
       state.last = now;
-      update(raw * state.speed);
+      if (state.started) update(raw * state.speed);
       drawLane("mob");
       drawLane("boss");
       if (state.dirty) renderStatic();
@@ -2099,6 +2147,7 @@
     $("moveTopRightBtn").onclick = () => moveTopUnitsToLane("boss");
     $("sellBenchBtn").onclick = sellAllBench;
     $("restartBtn").onclick = restartGame;
+    $("startBtn").onclick = () => reset(true);
     $("recordsBtn").onclick = toggleRecords;
     $("speedBtn").onclick = () => {
       state.speed = state.speed >= state.maxSpeed ? 1 : state.speed + 1;
@@ -2118,7 +2167,7 @@
     });
     window.addEventListener("resize", renderStatic);
 
-    reset();
+    reset(false);
     requestAnimationFrame(loop);
   </script>
 </body>
