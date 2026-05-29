@@ -712,6 +712,8 @@
     const MOB_DANGER_COUNT = 80;
     const MOB_CRITICAL_COUNT = 90;
     const MOB_CRITICAL_SPAWN_MULTIPLIER = 4;
+    const MOB_CRITICAL_MIN_SPAWN_MULTIPLIER = 1.4;
+    const MOB_CRITICAL_DECAY_PER_SECOND = .12;
     const FINAL_BOSS_SECONDS = 90;
     const FINAL_SUMMON_EVERY = 20;
     const SAVE_KEY = "baebbopdi-save-v1";
@@ -770,6 +772,7 @@
       upgrades: { fire: 0, water: 0, grass: 0 },
       stats: { totalDraws: 0, diamondDraws: 0, legendDraws: 0 },
       spawnTimer: 0,
+      criticalSpawnTime: 0,
       last: performance.now(),
       dirty: true
     };
@@ -1183,6 +1186,7 @@
         upgrades: { fire: 0, water: 0, grass: 0 },
         stats: { totalDraws: 0, diamondDraws: 0, legendDraws: 0 },
         spawnTimer: 0,
+        criticalSpawnTime: 0,
         last: performance.now(),
         dirty: true
       });
@@ -1232,6 +1236,7 @@
       state.roundLimit = ROUND_SECONDS + state.timeBank;
       if (round === 30) state.roundLimit = FINAL_BOSS_SECONDS;
       state.spawnTimer = 0;
+      state.criticalSpawnTime = 0;
       state.roundElement = state.roundElements[round - 1] || null;
       state.affix = !bossRounds.includes(round) && Math.random() < .13 ? affixes[Math.floor(Math.random() * affixes.length)] : null;
       const affix = state.affix || { hp: 1, speed: 1, count: 1 };
@@ -1610,8 +1615,8 @@
     function forceNextRoundByTime() {
       if (state.boss && !state.boss.dead) return;
       if (state.round >= 30) return;
+      if (state.wave?.remaining > 0) return;
       settleRoundTime(false);
-      state.wave.remaining = 0;
       toast("시간 종료 · 다음 라운드 시작");
       nextRound();
     }
@@ -1620,10 +1625,16 @@
       if (state.gameOver) return;
       state.time += dt;
       state.roundTime += dt;
+      const mobCritical = state.mobs.length >= MOB_CRITICAL_COUNT;
+      state.criticalSpawnTime = mobCritical ? state.criticalSpawnTime + dt : 0;
 
       if (state.wave?.remaining > 0) {
         state.spawnTimer += dt;
-        const spawnEvery = state.mobs.length >= MOB_CRITICAL_COUNT ? MOB_SPAWN_EVERY * MOB_CRITICAL_SPAWN_MULTIPLIER : MOB_SPAWN_EVERY;
+        const criticalMultiplier = Math.max(
+          MOB_CRITICAL_MIN_SPAWN_MULTIPLIER,
+          MOB_CRITICAL_SPAWN_MULTIPLIER - state.criticalSpawnTime * MOB_CRITICAL_DECAY_PER_SECOND
+        );
+        const spawnEvery = mobCritical ? MOB_SPAWN_EVERY * criticalMultiplier : MOB_SPAWN_EVERY;
         while (state.spawnTimer >= spawnEvery && state.wave.remaining > 0) {
           state.spawnTimer -= spawnEvery;
           state.mobs.push(makeMob());
