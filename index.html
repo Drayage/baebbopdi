@@ -239,7 +239,7 @@
 
     .slots {
       position: absolute;
-      z-index: 4;
+      z-index: 12;
       display: grid;
     }
 
@@ -260,12 +260,15 @@
     .slot {
       position: relative;
       min-width: 0;
+      min-height: 0;
       border-radius: 8px;
       border: 2px dashed rgba(255, 255, 255, .22);
       background: rgba(10, 14, 21, .38);
       display: grid;
       place-items: center;
       overflow: hidden;
+      touch-action: manipulation;
+      cursor: pointer;
     }
 
     .slot.ready {
@@ -2100,7 +2103,7 @@
         : !state.started
           ? "게임 시작 버튼을 눌러 1라운드를 시작하세요."
         : mobCritical
-          ? "⚠️ 초위험: 잡몹 90마리 이상. 스폰이 느려진 지금 강한 유닛을 왼쪽으로 옮기세요."
+          ? "⚠️ 초위험: 잡몹 90마리 이상. 강한 유닛을 왼쪽으로 옮기세요."
         : mobDanger
           ? "⚠️ 위험: 잡몹이 80마리를 넘었습니다. 왼쪽 라인 딜러를 더 배치하세요."
         : bossDanger
@@ -2125,6 +2128,32 @@
         if (unit) button.appendChild(unitNode(unit));
         root.appendChild(button);
       }
+    }
+
+    function nearestSlotFromPoint(lane, clientX, clientY) {
+      const root = lane === "mob" ? $("mobSlots") : $("bossSlots");
+      const rect = root.getBoundingClientRect();
+      if (!rect.width || !rect.height) return null;
+      const pad = 26;
+      if (clientX < rect.left - pad || clientX > rect.right + pad || clientY < rect.top - pad || clientY > rect.bottom + pad) return null;
+      const cols = 5;
+      const rows = 4;
+      const x = Math.max(0, Math.min(rect.width - 1, clientX - rect.left));
+      const y = Math.max(0, Math.min(rect.height - 1, clientY - rect.top));
+      const col = Math.max(0, Math.min(cols - 1, Math.floor(x / (rect.width / cols))));
+      const row = Math.max(0, Math.min(rows - 1, Math.floor(y / (rect.height / rows))));
+      return row * cols + col;
+    }
+
+    function laneBackgroundClick(lane, event) {
+      const selected = selectedUnit();
+      if (!selected && !state.sellMode) return;
+      const slot = nearestSlotFromPoint(lane, event.clientX, event.clientY);
+      if (slot !== null && !slotUnit(lane, slot)) {
+        placeUnit(lane, slot);
+        return;
+      }
+      clearSelection();
     }
 
     function unitNode(unit) {
@@ -2294,13 +2323,13 @@
     document.querySelectorAll("[data-pick-element]").forEach((button) => {
       button.onclick = () => finishPick(button.dataset.pickElement);
     });
-    $("mobCanvas").onclick = clearSelection;
-    $("bossCanvas").onclick = clearSelection;
+    $("mobCanvas").onclick = (event) => laneBackgroundClick("mob", event);
+    $("bossCanvas").onclick = (event) => laneBackgroundClick("boss", event);
     $("mobLane").onclick = (event) => {
-      if (event.target === $("mobLane")) clearSelection();
+      if (event.target === $("mobLane")) laneBackgroundClick("mob", event);
     };
     $("bossLane").onclick = (event) => {
-      if (event.target === $("bossLane")) clearSelection();
+      if (event.target === $("bossLane")) laneBackgroundClick("boss", event);
     };
     window.addEventListener("resize", renderStatic);
 
