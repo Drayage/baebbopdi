@@ -793,7 +793,7 @@
       const t = tier(unit.tier);
       const elementText = unitElements(unit).map((key) => elem(key).icon).join("");
       const targetElement = targetElementForUnit(unit);
-      const dps = Math.round(baseDamage(unit, targetElement) / attackInterval(unit));
+      const dps = Math.round(neutralDps(unit));
       const upgradeCount = unitElements(unit).reduce((sum, key) => sum + (state.upgrades[key] || 0), 0);
       const upgradeBonus = Math.round((upgradeMultiplier(unit) - 1) * 100);
       const relationText = targetElement ? `${elem(targetElement).icon} ${elem(targetElement).name}` : "없음";
