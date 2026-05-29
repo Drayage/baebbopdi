@@ -1575,6 +1575,32 @@
       ctx.globalAlpha = 1;
     }
 
+    function hpGauge(target) {
+      const hp = Math.max(0, target.hp);
+      const maxHp = Math.max(1, target.maxHp);
+      if (maxHp < 5000) return { ratio: hp / maxHp, layers: 1 };
+      const layers = maxHp >= 100000 ? 10 : 5;
+      const chunk = maxHp / layers;
+      if (hp <= 0) return { ratio: 0, layers };
+      const currentChunkHp = hp - Math.floor((hp - .0001) / chunk) * chunk;
+      return { ratio: Math.max(.02, Math.min(1, currentChunkHp / chunk)), layers };
+    }
+
+    function drawHpGauge(ctx, x, y, width, height, target, color) {
+      const gauge = hpGauge(target);
+      ctx.fillStyle = "rgba(0,0,0,.64)";
+      ctx.fillRect(x, y, width, height);
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, width * gauge.ratio, height);
+      if (gauge.layers > 1) {
+        ctx.fillStyle = "rgba(255,255,255,.45)";
+        for (let i = 1; i < gauge.layers; i++) {
+          const tickX = x + width * i / gauge.layers;
+          ctx.fillRect(tickX - .5, y, 1, height);
+        }
+      }
+    }
+
     function drawMobs(ctx, canvas) {
       state.mobs.forEach((mob) => {
         const p = boxPath(canvas, mob.t);
@@ -1587,11 +1613,7 @@
         ctx.arc(p.x, p.y, mob.size * scale, 0, Math.PI * 2);
         ctx.fill();
         ctx.shadowBlur = 0;
-        const hp = Math.max(0, mob.hp / mob.maxHp);
-        ctx.fillStyle = "rgba(0,0,0,.6)";
-        ctx.fillRect(p.x - 14, p.y - 18, 28, 4);
-        ctx.fillStyle = "#fff";
-        ctx.fillRect(p.x - 14, p.y - 18, 28 * hp, 4);
+        drawHpGauge(ctx, p.x - 14, p.y - 18, 28, 4, mob, "#fff");
       });
     }
 
@@ -1622,11 +1644,7 @@
         ctx.fillRect(-6, -28, 12, 56);
       }
       ctx.restore();
-      const hp = Math.max(0, target.hp / target.maxHp);
-      ctx.fillStyle = "rgba(0,0,0,.65)";
-      ctx.fillRect(p.x - 48, p.y + 48, 96, 8);
-      ctx.fillStyle = color;
-      ctx.fillRect(p.x - 48, p.y + 48, 96 * hp, 8);
+      drawHpGauge(ctx, p.x - 48, p.y + 48, 96, 8, target, color);
     }
 
     function drawShots(ctx, lane) {
