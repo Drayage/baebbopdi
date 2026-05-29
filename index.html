@@ -1220,6 +1220,7 @@
         }
         state.chest = null;
         state.boss = makeBoss(round);
+        state.speed = 1;
         const bossElement = elem(state.boss.element);
         bigAlert(`${round}R 보스 등장`, `${bossElement.icon} ${bossElement.name} 속성 보스가 오른쪽 라인에 진입했습니다.`, 1700);
         toast(`${round}R 보스 등장`);
