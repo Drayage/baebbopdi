@@ -583,6 +583,7 @@
 
   <script>
     const ROUND_SECONDS = 45;
+    const SAVE_KEY = "baebbopdi-save-v1";
     const bossRounds = [10, 20, 30];
     const elementCycle = ["fire", "grass", "water"];
     const tiers = [
@@ -612,6 +613,7 @@
       round: 1,
       coins: { silver: 5, gold: 0, diamond: 0, boss: 0 },
       speed: 1,
+      maxSpeed: 2,
       time: 0,
       roundTime: 0,
       timeBank: 0,
@@ -745,6 +747,35 @@
 
     function randomElem() {
       return elems[Math.floor(Math.random() * elems.length)];
+    }
+
+    function loadSave() {
+      try {
+        return JSON.parse(localStorage.getItem(SAVE_KEY) || "{}");
+      } catch {
+        return {};
+      }
+    }
+
+    function saveProgress(data) {
+      try {
+        localStorage.setItem(SAVE_KEY, JSON.stringify({ ...loadSave(), ...data }));
+      } catch {
+        /* localStorage may be blocked in private browsing. */
+      }
+    }
+
+    function loadMaxSpeed() {
+      const saved = Number(loadSave().maxSpeed || 2);
+      return Math.max(2, Math.min(5, saved));
+    }
+
+    function unlockMaxSpeed(value) {
+      const next = Math.max(state.maxSpeed, Math.min(5, value));
+      if (next === state.maxSpeed) return false;
+      state.maxSpeed = next;
+      saveProgress({ maxSpeed: next });
+      return true;
     }
 
     function rollTier() {
@@ -929,6 +960,7 @@
         round: 1,
         coins: { silver: 5, gold: 0, diamond: 0, boss: 0 },
         speed: 1,
+        maxSpeed: loadMaxSpeed(),
         time: 0,
         roundTime: 0,
         timeBank: 0,
@@ -1442,7 +1474,10 @@
       if (state.boss && state.boss.hp <= 0 && !state.boss.dead) {
         state.boss.dead = true;
         state.coins.boss += 1;
+        const unlockedSpeed = { 10: 3, 20: 4, 30: 5 }[state.boss.round];
+        const unlocked = unlockedSpeed ? unlockMaxSpeed(unlockedSpeed) : false;
         toast("보스 처치 · 👑 1");
+        if (unlocked) toast(`⏩ ${state.maxSpeed}배속 해금`);
         state.dirty = true;
         if (bossRounds.includes(state.round) && state.round < 30) {
           settleRoundTime(true);
@@ -1759,6 +1794,7 @@
       $("coinPill").textContent = coinText();
       $("limitPill").textContent = `🌀 ${state.mobs.length} / 100`;
       $("speedBtn").textContent = `⏩ ${state.speed}x`;
+      $("speedBtn").title = `해금 최대 ${state.maxSpeed}x`;
       $("mobCount").textContent = `${state.mobs.length}마리 · 잔여 ${state.wave?.remaining || 0} · ⏳ ${formatTime(state.roundLimit - state.roundTime)}초 · 저축 ${formatTime(state.timeBank)}초`;
       if (state.boss && !state.boss.dead) {
         const shield = state.boss.round === 30 && state.mobs.some((mob) => mob.summoned) ? " · 실드 80%" : "";
@@ -1898,7 +1934,7 @@
     $("sellBenchBtn").onclick = sellAllBench;
     $("restartBtn").onclick = reset;
     $("speedBtn").onclick = () => {
-      state.speed = state.speed === 1 ? 2 : 1;
+      state.speed = state.speed >= state.maxSpeed ? 1 : state.speed + 1;
       renderStatic();
     };
     $("bossPick").onclick = () => buyPick("boss", "diamond", "다이아 픽");
