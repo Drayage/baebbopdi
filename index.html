@@ -184,6 +184,19 @@
       overflow: hidden;
     }
 
+    .lane.danger {
+      border-color: rgba(255, 92, 112, .78);
+      box-shadow: 0 0 0 1px rgba(255, 92, 112, .24), 0 0 34px rgba(255, 48, 77, .32), var(--shadow);
+      animation: dangerPulse .72s ease-in-out infinite alternate;
+    }
+
+    .pill.danger {
+      color: #fff;
+      border-color: rgba(255, 92, 112, .78);
+      background: linear-gradient(135deg, rgba(255, 48, 77, .92), rgba(255, 159, 82, .86));
+      animation: dangerPulse .72s ease-in-out infinite alternate;
+    }
+
     .lane-head {
       position: absolute;
       z-index: 5;
@@ -506,6 +519,11 @@
       100% { opacity: 0; }
     }
 
+    @keyframes dangerPulse {
+      from { filter: brightness(1); }
+      to { filter: brightness(1.28); }
+    }
+
     @media (max-width: 900px) {
       header { grid-template-columns: 1fr; }
       .hud { justify-content: flex-start; }
@@ -621,6 +639,7 @@
 
   <script>
     const ROUND_SECONDS = 45;
+    const MOB_SPAWN_EVERY = .18;
     const SAVE_KEY = "baebbopdi-save-v1";
     const bossRounds = [10, 20, 30];
     const elementCycle = ["fire", "grass", "water"];
@@ -702,18 +721,22 @@
       toast.timer = setTimeout(() => node.classList.remove("show"), 1300);
     }
 
-    function hype(tierKey, elementKey) {
-      const t = tier(tierKey);
-      if (!t || !t.splash) return;
-      const e = elem(elementKey);
-      $("hypeTitle").textContent = t.key === "legend" ? "전설 떴다!" : "다이아 떴다!";
-      $("hypeSub").textContent = `${e.icon} ${t.name} 유닛 확보. 라인 지우러 가자.`;
+    function bigAlert(title, sub, duration = 1500) {
+      $("hypeTitle").textContent = title;
+      $("hypeSub").textContent = sub;
       const node = $("hype");
       node.classList.remove("show");
       void node.offsetWidth;
       node.classList.add("show");
       clearTimeout(hype.timer);
-      hype.timer = setTimeout(() => node.classList.remove("show"), 1500);
+      hype.timer = setTimeout(() => node.classList.remove("show"), duration);
+    }
+
+    function hype(tierKey, elementKey) {
+      const t = tier(tierKey);
+      if (!t || !t.splash) return;
+      const e = elem(elementKey);
+      bigAlert(t.key === "legend" ? "전설 떴다!" : "다이아 떴다!", `${e.icon} ${t.name} 유닛 확보. 라인 지우러 가자.`);
     }
 
     function shuffle(array) {
@@ -1112,6 +1135,9 @@
         }
         state.chest = null;
         state.boss = makeBoss(round);
+        const bossElement = elem(state.boss.element);
+        bigAlert(`${round}R 보스 등장`, `${bossElement.icon} ${bossElement.name} 속성 보스가 오른쪽 라인에 진입했습니다.`, 1700);
+        toast(`${round}R 보스 등장`);
       }
       if (round === 5) {
         const text = state.bossPreview.map((boss) => `${boss.round}R ${elem(boss.element).icon}${elem(boss.element).name}`).join(" / ");
@@ -1438,7 +1464,7 @@
 
       if (state.wave?.remaining > 0) {
         state.spawnTimer += dt;
-        const spawnEvery = .15;
+        const spawnEvery = MOB_SPAWN_EVERY;
         while (state.spawnTimer >= spawnEvery && state.wave.remaining > 0) {
           state.spawnTimer -= spawnEvery;
           state.mobs.push(makeMob());
@@ -1898,10 +1924,13 @@
       const attr = state.roundElement ? `${elem(state.roundElement).icon} ${elem(state.roundElement).name}` : "무";
       $("attrPill").textContent = `속성 ${attr}${state.affix ? ` · ${state.affix.label}` : ""}`;
       $("coinPill").textContent = coinText();
+      const mobDanger = state.mobs.length >= 90;
       $("limitPill").textContent = `🌀 ${state.mobs.length} / 100`;
+      $("limitPill").classList.toggle("danger", mobDanger);
+      $("mobLane").classList.toggle("danger", mobDanger);
       $("speedBtn").textContent = `⏩ ${state.speed}x`;
       $("speedBtn").title = `해금 최대 ${state.maxSpeed}x`;
-      $("mobCount").textContent = `${state.mobs.length}마리 · 잔여 ${state.wave?.remaining || 0} · ⏳ ${formatTime(state.roundLimit - state.roundTime)}초 · 저축 ${formatTime(state.timeBank)}초`;
+      $("mobCount").textContent = `${mobDanger ? "⚠️ " : ""}${state.mobs.length}마리 · 잔여 ${state.wave?.remaining || 0} · ⏳ ${formatTime(state.roundLimit - state.roundTime)}초 · 저축 ${formatTime(state.timeBank)}초`;
       if (state.boss && !state.boss.dead) {
         const shield = state.boss.round === 30 && state.mobs.some((mob) => mob.summoned) ? " · 실드 80%" : "";
         $("bossInfo").textContent = `${state.boss.round}R 보스 ${elem(state.boss.element).icon} HP ${formatHp(state.boss.hp)} / ${formatHp(state.boss.maxHp)}${shield}`;
@@ -1910,6 +1939,8 @@
       const preview = state.round >= 5 ? ` · 보스예고 ${state.bossPreview.map((boss) => `${boss.round}R ${elem(boss.element).icon}`).join(" ")}` : "";
       $("statusText").textContent = state.gameOver
         ? "게임 종료. 재시작으로 다시 도전하세요."
+        : mobDanger
+          ? "⚠️ 위험: 잡몹이 90마리를 넘었습니다. 왼쪽 라인 딜러를 더 배치하세요."
         : state.sellMode
           ? "판매선택 중입니다. 유닛을 탭하면 계속 판매됩니다."
         : state.pendingPick
