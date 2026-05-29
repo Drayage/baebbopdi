@@ -1611,7 +1611,18 @@
         button.className = `bench-card${unit?.id === state.selected ? " selected" : ""}`;
         button.setAttribute("aria-label", unit ? `${tier(unit.tier).name} ${elem(unit.elem).name}` : "빈 대기석");
         button.onclick = () => {
-          if (!unit) return;
+          if (!unit) {
+            const selected = selectedUnit();
+            if (!selected || selected.lane === "bench") return;
+            selected.lane = "bench";
+            selected.slot = null;
+            state.selected = selected.id;
+            state.sellMode = false;
+            state.dirty = true;
+            toast("대기석으로 복귀");
+            renderStatic();
+            return;
+          }
           if (state.sellMode) return sellUnit(unit);
           state.selected = unit.id;
           renderStatic();
