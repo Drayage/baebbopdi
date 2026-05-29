@@ -197,6 +197,17 @@
       animation: dangerPulse .72s ease-in-out infinite alternate;
     }
 
+    body.screen-danger::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: 28;
+      pointer-events: none;
+      background: rgba(255, 24, 64, .2);
+      box-shadow: inset 0 0 110px rgba(255, 24, 64, .72);
+      animation: screenDangerFlash .58s ease-in-out infinite alternate;
+    }
+
     .lane-head {
       position: absolute;
       z-index: 5;
@@ -559,6 +570,11 @@
       to { filter: brightness(1.28); }
     }
 
+    @keyframes screenDangerFlash {
+      from { opacity: .18; }
+      to { opacity: .78; }
+    }
+
     @media (max-width: 900px) {
       header { grid-template-columns: 1fr; }
       .hud { justify-content: flex-start; }
@@ -655,9 +671,9 @@
           <button class="upgrade" id="splitBoss"><strong>👑 → 💎💎</strong><span class="small">보스코인 분해</span></button>
           <button class="upgrade" id="splitDiamond"><strong>💎 → 🪙🪙</strong><span class="small">다이아코인 분해</span></button>
           <button class="upgrade" id="splitGold"><strong>🪙 → 🥈🥈🥈</strong><span class="small">골드코인 분해</span></button>
-          <button class="upgrade" id="buySlow"><strong>💎 → ❄️ 감속</strong><span class="small">특수유닛 · 무상성·중첩불가</span></button>
-          <button class="upgrade" id="buyStun"><strong>💎 → ⚡ 기절</strong><span class="small">특수유닛 · 무상성</span></button>
-          <button class="upgrade" id="buySplash"><strong>💎 → ⏩ 공속</strong><span class="small">특수유닛 · 무상성·중첩불가</span></button>
+          <button class="upgrade" id="buySlow"><strong>💎 → ❄️ 감속</strong><span class="small">불+물 업글 · 무상성·중첩불가</span></button>
+          <button class="upgrade" id="buyStun"><strong>💎 → ⚡ 기절</strong><span class="small">물+풀 업글 · 무상성</span></button>
+          <button class="upgrade" id="buySplash"><strong>💎 → ⏩ 공속</strong><span class="small">풀+불 업글 · 무상성·중첩불가</span></button>
         </div>
         <div class="upgrade-grid" id="pickElements" style="display:none; margin-top:8px;">
           <button class="upgrade" data-pick-element="fire"><strong>🔥 불</strong><span class="small">픽 원소 선택</span></button>
@@ -2052,15 +2068,20 @@
       $("attrPill").textContent = `속성 ${attr}${state.affix ? ` · ${state.affix.label}` : ""}`;
       $("coinPill").textContent = coinText();
       const mobDanger = state.mobs.length >= 90;
+      const bossDanger = !!(state.boss && !state.boss.dead && state.boss.t >= .9);
+      const screenDanger = state.started && !state.gameOver && (mobDanger || bossDanger);
       $("limitPill").textContent = `🌀 ${state.mobs.length} / 100`;
       $("limitPill").classList.toggle("danger", mobDanger);
       $("mobLane").classList.toggle("danger", mobDanger);
+      $("bossLane").classList.toggle("danger", bossDanger);
+      $("bossInfo").classList.toggle("danger", bossDanger);
+      document.body.classList.toggle("screen-danger", screenDanger);
       $("speedBtn").textContent = `⏩ ${state.speed}x`;
       $("speedBtn").title = `해금 최대 ${state.maxSpeed}x`;
       $("mobCount").textContent = `${mobDanger ? "⚠️ " : ""}${state.mobs.length}마리 · 잔여 ${state.wave?.remaining || 0} · ⏳ ${formatTime(state.roundLimit - state.roundTime)}초 · 저축 ${formatTime(state.timeBank)}초`;
       if (state.boss && !state.boss.dead) {
         const shield = state.boss.round === 30 && state.mobs.some((mob) => mob.summoned) ? " · 실드 80%" : "";
-        $("bossInfo").textContent = `${state.boss.round}R 보스 ${elem(state.boss.element).icon} HP ${formatHp(state.boss.hp)} / ${formatHp(state.boss.maxHp)}${shield}`;
+        $("bossInfo").textContent = `${bossDanger ? "⚠️ " : ""}${state.boss.round}R 보스 ${elem(state.boss.element).icon} HP ${formatHp(state.boss.hp)} / ${formatHp(state.boss.maxHp)}${shield}`;
       } else if (state.chest && !state.chest.dead) $("bossInfo").textContent = `상자 Lv.${state.chest.level} HP ${formatHp(state.chest.hp)} / ${formatHp(state.chest.maxHp)} · 🥈 ${state.chest.reward}`;
       else $("bossInfo").textContent = state.round < 10 ? "상자 없음" : "보스 없음";
       const preview = state.round >= 5 ? ` · 보스예고 ${state.bossPreview.map((boss) => `${boss.round}R ${elem(boss.element).icon}`).join(" ")}` : "";
@@ -2070,6 +2091,8 @@
           ? "게임 시작 버튼을 눌러 1라운드를 시작하세요."
         : mobDanger
           ? "⚠️ 위험: 잡몹이 90마리를 넘었습니다. 왼쪽 라인 딜러를 더 배치하세요."
+        : bossDanger
+          ? "⚠️ 위험: 보스가 데드라인 직전입니다. 오른쪽 라인 화력을 집중하세요."
         : state.sellMode
           ? "판매선택 중입니다. 유닛을 탭하면 계속 판매됩니다."
         : state.pendingPick
