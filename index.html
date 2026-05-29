@@ -636,6 +636,7 @@
           <button class="btn blue" id="sellBtn">💰 판매선택</button>
           <button class="btn" id="deployLeftBtn">⬅ 대기석 모두 왼쪽배치</button>
           <button class="btn" id="recallLowBtn">↩ 낮은등급 대기석</button>
+          <button class="btn" id="sortAllMobBtn">🌀 전체 등급순 정렬</button>
           <button class="btn" id="moveTopLeftBtn">⬅ 높은등급 5기</button>
           <button class="btn" id="moveTopRightBtn">➡ 높은등급 5기</button>
           <button class="btn red" id="sellBenchBtn">💰 대기석 모두 팔기</button>
@@ -654,9 +655,9 @@
           <button class="upgrade" id="splitBoss"><strong>👑 → 💎💎</strong><span class="small">보스코인 분해</span></button>
           <button class="upgrade" id="splitDiamond"><strong>💎 → 🪙🪙</strong><span class="small">다이아코인 분해</span></button>
           <button class="upgrade" id="splitGold"><strong>🪙 → 🥈🥈🥈</strong><span class="small">골드코인 분해</span></button>
-          <button class="upgrade" id="buySlow"><strong>💎 ❄️ 감속</strong><span class="small">불+물 업글 절반 · 중첩불가</span></button>
-          <button class="upgrade" id="buyStun"><strong>💎 ⚡ 기절</strong><span class="small">물+풀 업글 절반 · 상성X</span></button>
-          <button class="upgrade" id="buySplash"><strong>💎 ⏩ 공속</strong><span class="small">풀+불 업글 절반 · 중첩불가</span></button>
+          <button class="upgrade" id="buySlow"><strong>💎 → ❄️ 감속</strong><span class="small">특수유닛 · 무상성·중첩불가</span></button>
+          <button class="upgrade" id="buyStun"><strong>💎 → ⚡ 기절</strong><span class="small">특수유닛 · 무상성</span></button>
+          <button class="upgrade" id="buySplash"><strong>💎 → ⏩ 공속</strong><span class="small">특수유닛 · 무상성·중첩불가</span></button>
         </div>
         <div class="upgrade-grid" id="pickElements" style="display:none; margin-top:8px;">
           <button class="upgrade" data-pick-element="fire"><strong>🔥 불</strong><span class="small">픽 원소 선택</span></button>
@@ -1367,6 +1368,47 @@
       state.dirty = true;
       const label = Object.entries(summary).map(([key, value]) => `${coinLabel(key)} ${value}`).join(", ");
       toast(`대기석 ${benchUnits.length}기 판매 · ${label}`);
+      renderStatic();
+    }
+
+    function sortAllUnitsToMob() {
+      if (!state.units.length) return toast("정렬할 유닛이 없습니다.");
+      const sorted = [...state.units].sort((a, b) => tierRank(b.tier) - tierRank(a.tier) || a.id - b.id);
+      sorted.forEach((unit, index) => {
+        if (index < 20) {
+          unit.lane = "mob";
+          unit.slot = index;
+        } else if (index < 30) {
+          unit.lane = "bench";
+          unit.slot = null;
+        } else {
+          unit.lane = "boss";
+          unit.slot = index - 30;
+        }
+      });
+      state.selected = null;
+      state.sellMode = false;
+      state.dirty = true;
+      toast("전체 유닛 등급순 정렬 완료");
+      renderStatic();
+    }
+
+    function sellOffElementUnits(keepElement) {
+      const targets = state.units.filter((unit) => unit.role === "dps" && unit.elem !== keepElement);
+      if (!targets.length) return toast(`${elem(keepElement).name} 외 판매할 일반 유닛이 없습니다.`);
+      const summary = {};
+      const targetIds = new Set(targets.map((unit) => unit.id));
+      targets.forEach((unit) => {
+        const reward = sellReward(unit);
+        state.coins[reward.type] += reward.amount;
+        summary[reward.type] = (summary[reward.type] || 0) + reward.amount;
+      });
+      state.units = state.units.filter((unit) => !targetIds.has(unit.id));
+      if (targetIds.has(state.selected)) state.selected = null;
+      state.sellMode = false;
+      state.dirty = true;
+      const label = Object.entries(summary).map(([key, value]) => `${coinLabel(key)} ${value}`).join(", ");
+      toast(`${elem(keepElement).name} 외 일반 ${targets.length}기 판매 · ${label}`);
       renderStatic();
     }
 
@@ -2106,16 +2148,25 @@
     }
 
     function renderUpgrades() {
-      $("upgrades").innerHTML = elems.map((item) => {
+      const upgradeButtons = elems.map((item) => {
         const level = state.upgrades[item.key];
         const cost = Math.floor(level / 3) + 1;
         return `<button class="upgrade" data-up="${item.key}">
           <strong>${item.icon} ${item.name} Lv.${level}</strong>
           <span class="small">비용 🥈 ${cost} · ATK +1 · 15% 복리</span>
         </button>`;
-      }).join("");
+      });
+      const sellButtons = elems.filter((item) => state.upgrades[item.key] >= 8).map((item) => `
+        <button class="upgrade" data-sell-off="${item.key}">
+          <strong>${item.icon} 외 일반유닛 판매</strong>
+          <span class="small">특수유닛 제외 · ${item.name}만 남김</span>
+        </button>`);
+      $("upgrades").innerHTML = [...upgradeButtons, ...sellButtons].join("");
       document.querySelectorAll("[data-up]").forEach((button) => {
         button.onclick = () => upgrade(button.dataset.up);
+      });
+      document.querySelectorAll("[data-sell-off]").forEach((button) => {
+        button.onclick = () => sellOffElementUnits(button.dataset.sellOff);
       });
     }
 
@@ -2185,6 +2236,7 @@
     $("sellBtn").onclick = toggleSellMode;
     $("deployLeftBtn").onclick = deployBenchToLeft;
     $("recallLowBtn").onclick = recallLowToBench;
+    $("sortAllMobBtn").onclick = sortAllUnitsToMob;
     $("moveTopLeftBtn").onclick = () => moveTopUnitsToLane("mob");
     $("moveTopRightBtn").onclick = () => moveTopUnitsToLane("boss");
     $("sellBenchBtn").onclick = sellAllBench;
