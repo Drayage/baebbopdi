@@ -1735,6 +1735,34 @@
       }
     }
 
+    function drawMobHpRing(ctx, x, y, mob, color) {
+      const scale = window.devicePixelRatio || 1;
+      const gauge = hpGauge(mob);
+      const radius = (mob.size + 3) * scale;
+      ctx.lineWidth = 2.4 * scale;
+      ctx.strokeStyle = "rgba(0,0,0,.58)";
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = color;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * gauge.ratio);
+      ctx.stroke();
+      if (gauge.layers > 1) {
+        const label = `x${gauge.remainingLayers}`;
+        const w = 19 * scale;
+        const h = 10 * scale;
+        const labelY = y - radius - 9 * scale;
+        ctx.fillStyle = "rgba(0,0,0,.72)";
+        ctx.fillRect(x - w / 2, labelY - h / 2, w, h);
+        ctx.font = `900 ${7 * scale}px system-ui, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = "#fff";
+        ctx.fillText(label, x, labelY + .5 * scale);
+      }
+    }
+
     function drawMobs(ctx, canvas) {
       state.mobs.forEach((mob) => {
         const p = boxPath(canvas, mob.t);
@@ -1747,8 +1775,7 @@
         ctx.arc(p.x, p.y, mob.size * scale, 0, Math.PI * 2);
         ctx.fill();
         ctx.shadowBlur = 0;
-        if (mob.elite) drawHpGauge(ctx, p.x - 18, p.y - 23, 36, 10, mob, "#ffdf6e");
-        else drawHpGauge(ctx, p.x - 14, p.y - 18, 28, 4, mob, "#fff");
+        drawMobHpRing(ctx, p.x, p.y, mob, mob.elite ? "#ffdf6e" : "#fff");
       });
     }
 
