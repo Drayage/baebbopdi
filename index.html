@@ -980,13 +980,13 @@
 
     function makeBoss(round) {
       const hp = round === 10 ? 20000 : round === 20 ? 200000 : 1000000;
-      const deadlineRounds = round === 30 ? 1 : 6;
+      const speed = round === 30 ? 1 / 75 : 1 / (ROUND_SECONDS * 6);
       return {
         round,
         hp,
         maxHp: hp,
         t: 0,
-        speed: 1 / (ROUND_SECONDS * deadlineRounds),
+        speed,
         element: currentBossElement(round),
         dead: false,
         finalTimer: round === 30 ? 75 : null,
@@ -999,6 +999,7 @@
       state.round = round;
       state.roundTime = 0;
       state.roundLimit = ROUND_SECONDS + state.timeBank;
+      if (round === 30) state.roundLimit = 75;
       state.spawnTimer = 0;
       state.roundElement = state.roundElements[round - 1] || null;
       state.affix = !bossRounds.includes(round) && Math.random() < .13 ? affixes[Math.floor(Math.random() * affixes.length)] : null;
@@ -1380,7 +1381,10 @@
           }
           if (state.boss.finalTimer <= 0) lose("최종 보스 제한시간 종료");
         }
-        if (state.boss.t >= 1) lose("보스가 데드라인에 도달했습니다.");
+        if (state.boss.t >= 1) {
+          if (state.boss.round === 30) state.boss.t = .999;
+          else lose("보스가 데드라인에 도달했습니다.");
+        }
       }
 
       state.units.filter((unit) => unit.lane !== "bench").forEach((unit) => {
