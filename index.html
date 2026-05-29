@@ -249,6 +249,13 @@
       transform: translateY(.02em);
     }
 
+    .unit[data-special] .unit-emoji {
+      font-size: 13px;
+      font-weight: 1000;
+      letter-spacing: 0;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, .45);
+    }
+
     .unit::after {
       content: attr(data-tier);
       position: absolute;
@@ -556,9 +563,9 @@
           <button class="upgrade" id="splitBoss"><strong>👑 → 💎💎</strong><span class="small">보스코인 분해</span></button>
           <button class="upgrade" id="splitDiamond"><strong>💎 → 🪙🪙</strong><span class="small">다이아코인 분해</span></button>
           <button class="upgrade" id="splitGold"><strong>🪙 → 🥈🥈🥈</strong><span class="small">골드코인 분해</span></button>
-          <button class="upgrade" id="buySlow"><strong>💎 슬로우</strong><span class="small">특수유닛 구매</span></button>
-          <button class="upgrade" id="buyStun"><strong>💎 스턴</strong><span class="small">특수유닛 구매</span></button>
-          <button class="upgrade" id="buySplash"><strong>💎 버프</strong><span class="small">공속 +10%</span></button>
+          <button class="upgrade" id="buySlow"><strong>💎 ❄️ 감속</strong><span class="small">불+물 업글 적용 · 딜 50%</span></button>
+          <button class="upgrade" id="buyStun"><strong>💎 ⚡ 기절</strong><span class="small">물+풀 업글 적용 · 딜 50%</span></button>
+          <button class="upgrade" id="buySplash"><strong>💎 ⏩ 공속</strong><span class="small">풀+불 업글 적용 · 딜 50%</span></button>
         </div>
         <div class="upgrade-grid" id="pickElements" style="display:none; margin-top:8px;">
           <button class="upgrade" data-pick-element="fire"><strong>🔥 불</strong><span class="small">픽 원소 선택</span></button>
@@ -778,6 +785,27 @@
       return { slow: "슬로우", stun: "스턴", buff: "버프" }[role] || role;
     }
 
+    function specialEffectLabel(role) {
+      return { slow: "감속", stun: "기절", buff: "공속" }[role] || "";
+    }
+
+    function specialEffectIcon(role) {
+      return { slow: "❄️", stun: "⚡", buff: "⏩" }[role] || "◆";
+    }
+
+    function specialEffectColor(role) {
+      return { slow: "#78d8ff", stun: "#ffe36d", buff: "#a2ff7a" }[role] || "#ffffff";
+    }
+
+    function unitEffectColor(unit) {
+      return unit.role === "dps" ? elem(unit.elem).color : specialEffectColor(unit.role);
+    }
+
+    function unitDisplayLabel(unit) {
+      if (unit.role !== "dps") return `${specialEffectIcon(unit.role)}${specialEffectLabel(unit.role)}`;
+      return unitElements(unit).map((key) => elem(key).icon).join("");
+    }
+
     function roleLabel(role) {
       return { dps: "딜러", slow: "슬로우", stun: "스턴", buff: "버프" }[role] || role;
     }
@@ -791,7 +819,7 @@
       const unit = selectedUnit();
       if (!unit) return "";
       const t = tier(unit.tier);
-      const elementText = unitElements(unit).map((key) => elem(key).icon).join("");
+      const elementText = unitDisplayLabel(unit);
       const targetElement = targetElementForUnit(unit);
       const dps = Math.round(neutralDps(unit));
       const upgradeCount = unitElements(unit).reduce((sum, key) => sum + (state.upgrades[key] || 0), 0);
@@ -835,6 +863,11 @@
       return Math.max(...unitElements(unit).map((key) => relation(key, targetElement)));
     }
 
+    function unitBaseDamage(unit) {
+      const base = tier(unit.tier).dmg;
+      return unit.role === "dps" ? base : base * .5;
+    }
+
     function attackSpeedMultiplier(unit) {
       const hasBuff = state.units.some((ally) => ally.lane === unit.lane && ally.role === "buff");
       return hasBuff && unit.role !== "buff" ? 1.1 : 1;
@@ -845,11 +878,11 @@
     }
 
     function baseDamage(unit, targetElement) {
-      return tier(unit.tier).dmg * upgradeMultiplier(unit) * bestRelation(unit, targetElement);
+      return unitBaseDamage(unit) * upgradeMultiplier(unit) * bestRelation(unit, targetElement);
     }
 
     function neutralDamage(unit) {
-      return tier(unit.tier).dmg * upgradeMultiplier(unit);
+      return unitBaseDamage(unit) * upgradeMultiplier(unit);
     }
 
     function neutralDps(unit) {
@@ -1349,7 +1382,7 @@
         }
         const dmg = baseDamage(unit, target.elem || target.element || null);
         const isSplash = !!tier(unit.tier).splash;
-        if (unit.elem === "fire") {
+        if (unit.role === "dps" && unit.elem === "fire") {
           hitTarget(unit, target, dmg, isSplash);
           state.effects.push({ lane: unit.lane, x: to.x, y: to.y, color: "#ff304d", age: 0, kind: "fire" });
         } else {
@@ -1363,10 +1396,10 @@
             toY: to.y,
             target,
             unitId: unit.id,
-            elem: unit.elem,
+            elem: unit.role === "dps" ? unit.elem : "special",
             dmg,
             splash: isSplash,
-            color: elem(unit.elem).color,
+            color: unitEffectColor(unit),
             life: 0
           });
         }
@@ -1433,7 +1466,7 @@
       recordDamage(unit, lane, finalDamage);
       if (splash) {
         const p = targetPoint(unit.lane, target);
-        state.effects.push({ lane: unit.lane, x: p.x, y: p.y, color: elem(unit.elem).color, age: 0, kind: "splash" });
+        state.effects.push({ lane: unit.lane, x: p.x, y: p.y, color: unitEffectColor(unit), age: 0, kind: "splash" });
       }
       if (unit.lane === "mob" && splash) {
         state.mobs.slice(0, 5).forEach((mob) => {
@@ -1711,15 +1744,15 @@
       if (unit.role === "buff") node.dataset.special = "B";
       const icon = document.createElement("span");
       icon.className = "unit-emoji";
-      icon.textContent = e.icon;
+      icon.textContent = unit.role === "dps" ? e.icon : `${specialEffectIcon(unit.role)}${specialEffectLabel(unit.role)}`;
       node.appendChild(icon);
-      if (unit.elements?.length > 1) {
+      if (unit.role === "dps" && unit.elements?.length > 1) {
         const marks = document.createElement("span");
         marks.className = "unit-elements";
         marks.textContent = unit.elements.map((key) => elem(key).icon).join("");
         node.appendChild(marks);
       }
-      node.title = `${t.name} ${e.name} · ${unit.role} · 킬 ${unit.kills}`;
+      node.title = `${t.name} ${unit.role === "dps" ? e.name : specialRoleLabel(unit.role)} · ${unit.role} · 킬 ${unit.kills}`;
       return node;
     }
 
@@ -1731,7 +1764,7 @@
         const unit = units[i];
         const button = document.createElement("button");
         button.className = `bench-card${unit?.id === state.selected ? " selected" : ""}`;
-        button.setAttribute("aria-label", unit ? `${tier(unit.tier).name} ${elem(unit.elem).name}` : "빈 대기석");
+        button.setAttribute("aria-label", unit ? `${tier(unit.tier).name} ${unit.role === "dps" ? elem(unit.elem).name : specialRoleLabel(unit.role)}` : "빈 대기석");
         button.onclick = () => {
           if (!unit) {
             const selected = selectedUnit();
@@ -1780,9 +1813,9 @@
       const section = (title, rows) => rows.length
         ? `<div class="small">${title}</div>` + rows.map(({ unit, dps }) => {
           const t = tier(unit.tier);
-          const e = elem(unit.elem);
+          const label = unitDisplayLabel(unit);
           const width = Math.max(5, dps / max * 100);
-          return `<div class="dps-row"><span>${t.label} ${e.icon}</span><span class="dps-track"><span class="dps-fill" style="width:${width}%"></span></span><span>${dps}</span></div>`;
+          return `<div class="dps-row"><span>${t.label} ${label}</span><span class="dps-track"><span class="dps-fill" style="width:${width}%"></span></span><span>${dps}</span></div>`;
         }).join("")
         : `<div class="small">${title} · 최근 딜 없음</div>`;
       $("dpsList").innerHTML = state.units.some((unit) => unit.lane !== "bench")
