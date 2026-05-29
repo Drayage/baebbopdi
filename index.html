@@ -605,7 +605,7 @@
       { key: "fast", label: "⚡ 신속", hp: 1, speed: 1.7, count: 1 },
       { key: "immune", label: "🛡️ 상태이상 면역", hp: 1.15, speed: 1.05, count: 1, immune: true },
       { key: "swarm", label: "👥 대량 발생", hp: .55, speed: 1.05, count: 2.7 },
-      { key: "elite", label: "👹 소수 정예", hp: 9.2, speed: .75, count: .5 }
+      { key: "elite", label: "👹 소수 정예", hp: 9.2, speed: .75, count: .25 }
     ];
 
     const state = {
@@ -1004,7 +1004,7 @@
       state.affix = !bossRounds.includes(round) && Math.random() < .13 ? affixes[Math.floor(Math.random() * affixes.length)] : null;
       const affix = state.affix || { hp: 1, speed: 1, count: 1 };
       state.wave = {
-        remaining: bossRounds.includes(round) ? 0 : state.affix?.key === "elite" ? 50 : 100,
+        remaining: bossRounds.includes(round) ? 0 : state.affix?.key === "elite" ? 25 : 100,
         hp: Math.round(roundMobHp(round) * affix.hp),
         speed: (.052 + round * .003) * affix.speed,
         element: state.roundElement,
