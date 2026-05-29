@@ -640,6 +640,8 @@
   <script>
     const ROUND_SECONDS = 45;
     const MOB_SPAWN_EVERY = .18;
+    const FINAL_BOSS_SECONDS = 90;
+    const FINAL_SUMMON_EVERY = 8;
     const SAVE_KEY = "baebbopdi-save-v1";
     const bossRounds = [10, 20, 30];
     const elementCycle = ["fire", "grass", "water"];
@@ -1097,7 +1099,7 @@
 
     function makeBoss(round) {
       const hp = round === 10 ? 20000 : round === 20 ? 200000 : 1000000;
-      const speed = round === 30 ? 1 / 75 : 1 / (ROUND_SECONDS * 6);
+      const speed = round === 30 ? 1 / FINAL_BOSS_SECONDS : 1 / (ROUND_SECONDS * 6);
       return {
         round,
         hp,
@@ -1106,7 +1108,7 @@
         speed,
         element: currentBossElement(round),
         dead: false,
-        finalTimer: round === 30 ? 75 : null,
+        finalTimer: round === 30 ? FINAL_BOSS_SECONDS : null,
         summonTimer: 0,
         stun: 0
       };
@@ -1116,7 +1118,7 @@
       state.round = round;
       state.roundTime = 0;
       state.roundLimit = ROUND_SECONDS + state.timeBank;
-      if (round === 30) state.roundLimit = 75;
+      if (round === 30) state.roundLimit = FINAL_BOSS_SECONDS;
       state.spawnTimer = 0;
       state.roundElement = state.roundElements[round - 1] || null;
       state.affix = !bossRounds.includes(round) && Math.random() < .13 ? affixes[Math.floor(Math.random() * affixes.length)] : null;
@@ -1497,7 +1499,7 @@
         if (state.boss.round === 30) {
           state.boss.finalTimer -= dt;
           state.boss.summonTimer += dt;
-          if (state.boss.summonTimer >= 5) {
+          if (state.boss.summonTimer >= FINAL_SUMMON_EVERY) {
             state.boss.summonTimer = 0;
             for (let i = 0; i < 15; i++) state.mobs.push(makeMob({ hp: 8000, speed: .07, element: state.roundElement, summoned: true }));
             toast("최종 보스가 잡몹을 소환했습니다.");
