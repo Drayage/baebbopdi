@@ -616,6 +616,7 @@
       mobs: [],
       shots: [],
       effects: [],
+      damageEvents: [],
       chest: null,
       boss: null,
       bossPreview: [],
@@ -881,6 +882,7 @@
         mobs: [],
         shots: [],
         effects: [],
+        damageEvents: [],
         chest: makeChest(),
         boss: null,
         bossPreview: buildBossPreview(),
@@ -1330,6 +1332,7 @@
       updateShots(dt);
       state.effects.forEach((effect) => effect.age += dt);
       state.effects = state.effects.filter((effect) => effect.age < .45);
+      pruneDamageEvents();
       state.mobs = state.mobs.filter((mob) => mob.hp > 0);
 
       if (state.mobs.length >= 100) lose("잡몹이 100마리에 도달했습니다.");
@@ -1362,18 +1365,44 @@
       return lane === "boss" ? zigPath(canvases.boss, target.t) : boxPath(canvases.mob, target.t);
     }
 
+    function recordDamage(unit, lane, amount) {
+      if (!amount || amount <= 0) return;
+      state.damageEvents.push({ unitId: unit.id, lane, amount, time: state.time });
+    }
+
+    function pruneDamageEvents() {
+      const cutoff = state.time - 5;
+      state.damageEvents = state.damageEvents.filter((event) => event.time >= cutoff);
+    }
+
+    function recentDps(unit, lane) {
+      const cutoff = state.time - 5;
+      const total = state.damageEvents.reduce((sum, event) => {
+        return event.unitId === unit.id && event.lane === lane && event.time >= cutoff ? sum + event.amount : sum;
+      }, 0);
+      return total / 5;
+    }
+
     function hitTarget(unit, target, dmg, splash) {
       if (!target || target.hp <= 0) return;
       let finalDamage = dmg;
       if (target === state.boss && state.boss?.round === 30 && state.mobs.some((mob) => mob.summoned)) finalDamage *= .2;
+      const lane = target === state.boss || target === state.chest ? "boss" : "mob";
+      const applied = Math.min(target.hp, finalDamage);
       target.hp -= finalDamage;
+      recordDamage(unit, lane, applied);
       if (splash) {
         const p = targetPoint(unit.lane, target);
         state.effects.push({ lane: unit.lane, x: p.x, y: p.y, color: elem(unit.elem).color, age: 0, kind: "splash" });
       }
       if (unit.lane === "mob" && splash) {
         state.mobs.slice(0, 5).forEach((mob) => {
-          if (mob !== target) mob.hp -= finalDamage * .35;
+          if (mob !== target) {
+            const splashDamage = finalDamage * .35;
+            const splashApplied = Math.min(mob.hp, splashDamage);
+            mob.hp -= splashDamage;
+            recordDamage(unit, "mob", splashApplied);
+          }
         });
       }
       if (unit.lane === "mob" && target.hp <= 0) {
@@ -1701,17 +1730,24 @@
     }
 
     function renderDps() {
-      const rows = state.units.filter((unit) => unit.lane !== "bench").map((unit) => ({
+      const rowsFor = (lane) => state.units.filter((unit) => unit.lane !== "bench").map((unit) => ({
         unit,
-        dps: Math.round(effectiveDps(unit))
-      })).sort((a, b) => b.dps - a.dps).slice(0, 8);
-      const max = Math.max(1, ...rows.map((row) => row.dps));
-      $("dpsList").innerHTML = rows.length ? rows.map(({ unit, dps }) => {
-        const t = tier(unit.tier);
-        const e = elem(unit.elem);
-        const width = Math.max(5, dps / max * 100);
-        return `<div class="dps-row"><span>${t.label} ${e.icon}</span><span class="dps-track"><span class="dps-fill" style="width:${width}%"></span></span><span>${dps}</span></div>`;
-      }).join("") : `<div class="small">필드에 유닛을 배치하면 DPS가 표시됩니다.</div>`;
+        dps: Math.round(recentDps(unit, lane))
+      })).filter((row) => row.dps > 0).sort((a, b) => b.dps - a.dps).slice(0, 6);
+      const mobRows = rowsFor("mob");
+      const bossRows = rowsFor("boss");
+      const max = Math.max(1, ...mobRows.map((row) => row.dps), ...bossRows.map((row) => row.dps));
+      const section = (title, rows) => rows.length
+        ? `<div class="small">${title}</div>` + rows.map(({ unit, dps }) => {
+          const t = tier(unit.tier);
+          const e = elem(unit.elem);
+          const width = Math.max(5, dps / max * 100);
+          return `<div class="dps-row"><span>${t.label} ${e.icon}</span><span class="dps-track"><span class="dps-fill" style="width:${width}%"></span></span><span>${dps}</span></div>`;
+        }).join("")
+        : `<div class="small">${title} · 최근 딜 없음</div>`;
+      $("dpsList").innerHTML = state.units.some((unit) => unit.lane !== "bench")
+        ? section("일반몹 최근 DPS", mobRows) + section("보스/상자 최근 DPS", bossRows)
+        : `<div class="small">필드에 유닛을 배치하면 최근 실제 DPS가 표시됩니다.</div>`;
     }
 
     function loop(now) {
