@@ -2124,10 +2124,20 @@
         const unit = slotUnit(lane, i);
         button.className = `slot${state.selected && !unit ? " ready" : ""}${unit?.id === state.selected ? " selected" : ""}`;
         button.setAttribute("aria-label", `${lane}-${i + 1}`);
-        button.onclick = () => placeUnit(lane, i);
+        button.dataset.slot = i;
         if (unit) button.appendChild(unitNode(unit));
         root.appendChild(button);
       }
+    }
+
+    function bindSlotInput(root, lane) {
+      root.onpointerdown = (event) => {
+        const button = event.target.closest(".slot");
+        if (!button || !root.contains(button)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        placeUnit(lane, Number(button.dataset.slot));
+      };
     }
 
     function nearestSlotFromPoint(lane, clientX, clientY) {
@@ -2297,6 +2307,8 @@
     }
 
     $("drawBtn").onclick = drawUnit;
+    bindSlotInput($("mobSlots"), "mob");
+    bindSlotInput($("bossSlots"), "boss");
     $("sellBtn").onclick = toggleSellMode;
     $("deployLeftBtn").onclick = deployBenchToLeft;
     $("recallLowBtn").onclick = recallLowToBench;
