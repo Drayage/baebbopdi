@@ -537,6 +537,7 @@
           <button class="btn primary" id="drawBtn">🎰 1실버 뽑기</button>
           <button class="btn blue" id="sellBtn">💰 판매선택</button>
           <button class="btn" id="deployLeftBtn">⬅ 대기석 모두 왼쪽배치</button>
+          <button class="btn" id="recallLowBtn">↩ 낮은등급 대기석</button>
           <button class="btn red" id="sellBenchBtn">💰 대기석 모두 팔기</button>
         </div>
         <div class="bench" id="bench"></div>
@@ -722,6 +723,10 @@
 
     function tier(key) {
       return tiers.find((item) => item.key === key);
+    }
+
+    function tierRank(key) {
+      return tiers.findIndex((item) => item.key === key);
     }
 
     function elem(key) {
@@ -981,7 +986,9 @@
     }
 
     function deployBenchToLeft() {
-      const benchUnits = state.units.filter((unit) => unit.lane === "bench");
+      const benchUnits = state.units
+        .filter((unit) => unit.lane === "bench")
+        .sort((a, b) => tierRank(b.tier) - tierRank(a.tier));
       if (!benchUnits.length) return toast("대기석에 유닛이 없습니다.");
       let moved = 0;
       benchUnits.forEach((unit) => {
@@ -998,6 +1005,26 @@
       state.sellMode = false;
       state.dirty = true;
       toast(moved ? `${moved}기 왼쪽 배치` : "왼쪽 배치칸이 가득 찼습니다.");
+      renderStatic();
+    }
+
+    function recallLowToBench() {
+      const open = 10 - state.units.filter((unit) => unit.lane === "bench").length;
+      if (open <= 0) return toast("대기석이 가득 찼습니다.");
+      const fieldUnits = state.units
+        .filter((unit) => unit.lane === "mob")
+        .sort((a, b) => tierRank(a.tier) - tierRank(b.tier) || a.slot - b.slot);
+      if (!fieldUnits.length) return toast("왼쪽 라인에 회수할 유닛이 없습니다.");
+      let moved = 0;
+      fieldUnits.slice(0, open).forEach((unit) => {
+        unit.lane = "bench";
+        unit.slot = null;
+        moved += 1;
+      });
+      state.selected = null;
+      state.sellMode = false;
+      state.dirty = true;
+      toast(`${moved}기 낮은등급 대기석 복귀`);
       renderStatic();
     }
 
@@ -1675,6 +1702,7 @@
     $("drawBtn").onclick = drawUnit;
     $("sellBtn").onclick = toggleSellMode;
     $("deployLeftBtn").onclick = deployBenchToLeft;
+    $("recallLowBtn").onclick = recallLowToBench;
     $("sellBenchBtn").onclick = sellAllBench;
     $("restartBtn").onclick = reset;
     $("speedBtn").onclick = () => {
