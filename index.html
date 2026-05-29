@@ -1289,6 +1289,7 @@
         elem: force.element === undefined ? state.wave.element : force.element,
         immune: force.immune === undefined ? state.wave.immune : force.immune,
         summoned: !!force.summoned,
+        elite: !!force.elite || state.affix?.key === "elite",
         stun: 0,
         size: 7 + Math.random() * 5
       };
@@ -1579,7 +1580,9 @@
       const hp = Math.max(0, target.hp);
       const maxHp = Math.max(1, target.maxHp);
       if (maxHp < 5000) return { ratio: hp / maxHp, layers: 1 };
-      const layers = maxHp >= 100000 ? 10 : 5;
+      const layers = target.elite
+        ? Math.min(28, Math.max(8, Math.ceil(maxHp / 2500)))
+        : maxHp >= 100000 ? 10 : 5;
       const chunk = maxHp / layers;
       if (hp <= 0) return { ratio: 0, layers };
       const currentChunkHp = hp - Math.floor((hp - .0001) / chunk) * chunk;
@@ -1613,7 +1616,7 @@
         ctx.arc(p.x, p.y, mob.size * scale, 0, Math.PI * 2);
         ctx.fill();
         ctx.shadowBlur = 0;
-        drawHpGauge(ctx, p.x - 14, p.y - 18, 28, 4, mob, "#fff");
+        drawHpGauge(ctx, p.x - 14, p.y - 18, 28, 4, mob, mob.elite ? "#ffdf6e" : "#fff");
       });
     }
 
