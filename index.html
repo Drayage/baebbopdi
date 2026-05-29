@@ -538,6 +538,8 @@
           <button class="btn blue" id="sellBtn">💰 판매선택</button>
           <button class="btn" id="deployLeftBtn">⬅ 대기석 모두 왼쪽배치</button>
           <button class="btn" id="recallLowBtn">↩ 낮은등급 대기석</button>
+          <button class="btn" id="moveTopLeftBtn">⬅ 높은등급 5기</button>
+          <button class="btn" id="moveTopRightBtn">➡ 높은등급 5기</button>
           <button class="btn red" id="sellBenchBtn">💰 대기석 모두 팔기</button>
         </div>
         <div class="bench" id="bench"></div>
@@ -1056,6 +1058,32 @@
       renderStatic();
     }
 
+    function moveTopUnitsToLane(targetLane) {
+      const sourceLane = targetLane === "boss" ? "mob" : "boss";
+      const targetName = targetLane === "boss" ? "오른쪽" : "왼쪽";
+      const sourceUnits = state.units
+        .filter((unit) => unit.lane === sourceLane)
+        .sort((a, b) => tierRank(b.tier) - tierRank(a.tier) || a.slot - b.slot)
+        .slice(0, 5);
+      if (!sourceUnits.length) return toast(`${sourceLane === "mob" ? "왼쪽" : "오른쪽"} 라인에 이동할 유닛이 없습니다.`);
+      let moved = 0;
+      sourceUnits.forEach((unit) => {
+        for (let i = 0; i < 20; i++) {
+          if (!slotUnit(targetLane, i)) {
+            unit.lane = targetLane;
+            unit.slot = i;
+            moved += 1;
+            break;
+          }
+        }
+      });
+      state.selected = null;
+      state.sellMode = false;
+      state.dirty = true;
+      toast(moved ? `${targetName}으로 높은등급 ${moved}기 이동` : `${targetName} 라인이 가득 찼습니다.`);
+      renderStatic();
+    }
+
     function sellAllBench() {
       const benchUnits = state.units.filter((unit) => unit.lane === "bench");
       if (!benchUnits.length) return toast("대기석에 판매할 유닛이 없습니다.");
@@ -1210,6 +1238,11 @@
 
     function nextRound() {
       if (state.round >= 30) return;
+      if (!bossRounds.includes(state.round)) {
+        const reward = state.affix ? 4 : 3;
+        state.coins.silver += reward;
+        toast(`웨이브 보상 · 🥈 +${reward}`);
+      }
       startRound(state.round + 1);
       renderStatic();
     }
@@ -1340,8 +1373,6 @@
       if (state.mobs.length >= 100) lose("잡몹이 100마리에 도달했습니다.");
       if (!bossRounds.includes(state.round) && state.wave?.remaining === 0 && state.mobs.length === 0) {
         settleRoundTime(true);
-        state.coins.silver += state.affix ? 4 : 3;
-        toast(`라운드 클리어 · 🥈 +${state.affix ? 4 : 3}`);
         nextRound();
       }
       if (!state.gameOver && state.roundTime >= state.roundLimit) forceNextRoundByTime();
@@ -1768,6 +1799,8 @@
     $("sellBtn").onclick = toggleSellMode;
     $("deployLeftBtn").onclick = deployBenchToLeft;
     $("recallLowBtn").onclick = recallLowToBench;
+    $("moveTopLeftBtn").onclick = () => moveTopUnitsToLane("mob");
+    $("moveTopRightBtn").onclick = () => moveTopUnitsToLane("boss");
     $("sellBenchBtn").onclick = sellAllBench;
     $("restartBtn").onclick = reset;
     $("speedBtn").onclick = () => {
