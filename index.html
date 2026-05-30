@@ -1621,21 +1621,23 @@
       nextRound();
     }
 
-    function update(dt) {
+    function update(dt, realDt = dt) {
       if (state.gameOver) return;
       state.time += dt;
       state.roundTime += dt;
       const mobCritical = state.mobs.length >= MOB_CRITICAL_COUNT;
-      state.criticalSpawnTime = mobCritical ? state.criticalSpawnTime + dt : 0;
+      state.criticalSpawnTime = mobCritical ? state.criticalSpawnTime + realDt : 0;
 
       if (state.wave?.remaining > 0) {
-        state.spawnTimer += dt;
-        const criticalMultiplier = Math.max(
-          MOB_CRITICAL_MIN_SPAWN_MULTIPLIER,
-          MOB_CRITICAL_SPAWN_MULTIPLIER - state.criticalSpawnTime * MOB_CRITICAL_DECAY_PER_SECOND
-        );
-        const spawnEvery = mobCritical ? MOB_SPAWN_EVERY * criticalMultiplier : MOB_SPAWN_EVERY;
-        while (state.spawnTimer >= spawnEvery && state.wave.remaining > 0) {
+        state.spawnTimer += mobCritical ? realDt : dt;
+        while (state.wave.remaining > 0) {
+          const criticalNow = state.mobs.length >= MOB_CRITICAL_COUNT;
+          const criticalMultiplier = Math.max(
+            MOB_CRITICAL_MIN_SPAWN_MULTIPLIER,
+            MOB_CRITICAL_SPAWN_MULTIPLIER - state.criticalSpawnTime * MOB_CRITICAL_DECAY_PER_SECOND
+          );
+          const spawnEvery = criticalNow ? MOB_SPAWN_EVERY * criticalMultiplier : MOB_SPAWN_EVERY;
+          if (state.spawnTimer < spawnEvery) break;
           state.spawnTimer -= spawnEvery;
           state.mobs.push(makeMob());
           state.wave.remaining -= 1;
@@ -2309,7 +2311,7 @@
     function loop(now) {
       const raw = Math.min(.05, (now - state.last) / 1000);
       state.last = now;
-      if (state.started) update(raw * state.speed);
+      if (state.started) update(raw * state.speed, raw);
       drawLane("mob");
       drawLane("boss");
       if (state.dirty) renderStatic();
