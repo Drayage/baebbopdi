@@ -773,6 +773,7 @@
       stats: { totalDraws: 0, diamondDraws: 0, legendDraws: 0 },
       spawnTimer: 0,
       criticalSpawnTime: 0,
+      criticalWarningShown: false,
       last: performance.now(),
       dirty: true
     };
@@ -1187,6 +1188,7 @@
         stats: { totalDraws: 0, diamondDraws: 0, legendDraws: 0 },
         spawnTimer: 0,
         criticalSpawnTime: 0,
+        criticalWarningShown: false,
         last: performance.now(),
         dirty: true
       });
@@ -1237,6 +1239,7 @@
       if (round === 30) state.roundLimit = FINAL_BOSS_SECONDS;
       state.spawnTimer = 0;
       state.criticalSpawnTime = 0;
+      state.criticalWarningShown = false;
       state.roundElement = state.roundElements[round - 1] || null;
       state.affix = !bossRounds.includes(round) && Math.random() < .13 ? affixes[Math.floor(Math.random() * affixes.length)] : null;
       const affix = state.affix || { hp: 1, speed: 1, count: 1 };
@@ -1621,15 +1624,15 @@
       nextRound();
     }
 
-    function update(dt, realDt = dt) {
+    function update(dt) {
       if (state.gameOver) return;
       state.time += dt;
       state.roundTime += dt;
       const mobCritical = state.mobs.length >= MOB_CRITICAL_COUNT;
-      state.criticalSpawnTime = mobCritical ? state.criticalSpawnTime + realDt : 0;
+      state.criticalSpawnTime = mobCritical ? state.criticalSpawnTime + dt : 0;
 
       if (state.wave?.remaining > 0) {
-        state.spawnTimer += mobCritical ? realDt : dt;
+        state.spawnTimer += dt;
         while (state.wave.remaining > 0) {
           const criticalNow = state.mobs.length >= MOB_CRITICAL_COUNT;
           const criticalMultiplier = Math.max(
@@ -1642,6 +1645,11 @@
           state.mobs.push(makeMob());
           state.wave.remaining -= 1;
         }
+      }
+      if (state.mobs.length >= MOB_CRITICAL_COUNT && !state.criticalWarningShown) {
+        state.criticalWarningShown = true;
+        state.speed = 1;
+        toast("잡몹 90마리 돌파 · 1배속 전환");
       }
 
       state.mobs.forEach((mob) => {
@@ -2311,7 +2319,7 @@
     function loop(now) {
       const raw = Math.min(.05, (now - state.last) / 1000);
       state.last = now;
-      if (state.started) update(raw * state.speed, raw);
+      if (state.started) update(raw * state.speed);
       drawLane("mob");
       drawLane("boss");
       if (state.dirty) renderStatic();
